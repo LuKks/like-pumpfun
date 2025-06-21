@@ -6,8 +6,6 @@ Create, buy, and sell tokens on pump.fun (V1) easily
 npm i like-pumpfun
 ```
 
-Need support? Join the community: https://lucasbarrena.com
-
 ## Usage
 
 Both `like-pumpfun` and `like-pumpswap` have similar API on purpose for easyness.
