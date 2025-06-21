@@ -1,0 +1,35 @@
+{
+  "name": "like-pumpfun",
+  "version": "2.4.3",
+  "description": "Create, buy, and sell tokens on pump.fun (V1) easily",
+  "main": "index.js",
+  "files": [
+    "idl.json"
+  ],
+  "scripts": {
+    "test": "standard && brittle test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lukks/like-pumpfun.git"
+  },
+  "author": "Lucas Barrena (LuKks)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lukks/like-pumpfun/issues"
+  },
+  "homepage": "https://github.com/lukks/like-pumpfun#readme",
+  "devDependencies": {
+    "brittle": "^3.16.3",
+    "dotenv": "^16.5.0",
+    "like-image": "^1.0.0",
+    "like-solana": "^2.0.0",
+    "standard": "^17.1.2"
+  },
+  "dependencies": {
+    "borsh-encoding": "^1.0.5",
+    "solana-public-key": "^1.0.1",
+    "solana-token-program": "^1.0.0",
+    "solana-transaction-instruction": "^1.0.1"
+  }
+}
