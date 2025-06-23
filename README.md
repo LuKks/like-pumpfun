@@ -39,7 +39,7 @@ async function main () {
   const ixBuy = pumpfun.buy(mint, swapBuy.baseAmountOut, swapBuy.quoteInMax, user.publicKey, reserves)
   const txBuy = SOL.sign(ixBuy, { unitPrice: 0.0001, signers: [user], recentBlockhash })
 
-  console('Buy signature:', SOL.signature(txBuy))
+  console.log('Buy signature:', SOL.signature(txBuy))
 
   await rpc.sendTransaction(txBuy)
 
@@ -52,7 +52,7 @@ async function main () {
   const ixSell = pumpfun.sell(mint, swapSell.baseAmountIn, swapSell.quoteOutMin, user.publicKey, reserves)
   const txSell = SOL.sign(ixSell, { unitPrice: 0.0001, signers: [user], recentBlockhash })
 
-  console('Sell signature:', SOL.signature(txSell))
+  console.log('Sell signature:', SOL.signature(txSell))
 
   await rpc.sendTransaction(txSell)
 
