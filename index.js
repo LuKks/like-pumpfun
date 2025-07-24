@@ -24,6 +24,8 @@ module.exports = class Pumpfun {
     this.borsh = new Borsh(IDL_PUMP_FUN)
     this.global = Pumpfun.global()
 
+    this.programId = opts.programId || PUMP_PROGRAM
+
     this.opened = false
     this.opening = this.ready()
     this.opening.then(() => {
@@ -461,17 +463,22 @@ module.exports = class Pumpfun {
 
     const globalAddress = PublicKey.findProgramAddressSync([Buffer.from('global')], PUMP_PROGRAM)[0]
 
-    // TODO: Borsh needs auto-encoding for args
-    const data = Buffer.concat([
-      Borsh.discriminator('global', 'buy'),
-      Buffer.alloc(8),
-      Buffer.alloc(8)
-    ])
-    data.writeBigUInt64LE(baseOut, 8)
-    data.writeBigUInt64LE(quoteInMax, 16)
+    // Optional hook for external encoding
+    let data = !this._encode ? null : this._encode('buy', { baseOut, quoteInMax })
+
+    if (!data) {
+      // TODO: Borsh needs auto-encoding for args
+      data = Buffer.concat([
+        Borsh.discriminator('global', 'buy'),
+        Buffer.alloc(8),
+        Buffer.alloc(8)
+      ])
+      data.writeBigUInt64LE(baseOut, 8)
+      data.writeBigUInt64LE(quoteInMax, 16)
+    }
 
     instructions.push(new TransactionInstruction({
-      programId: PUMP_PROGRAM,
+      programId: this.programId,
       // TODO: Use the IDL to create the keys based on "instructions->buy"
       keys: [
         { pubkey: globalAddress, isSigner: false, isWritable: false },
@@ -518,7 +525,7 @@ module.exports = class Pumpfun {
     data.writeBigUInt64LE(quoteOutMin, 16)
 
     instructions.push(new TransactionInstruction({
-      programId: PUMP_PROGRAM,
+      programId: this.programId,
       // TODO: Use the IDL to create the keys based on "instructions->sell"
       keys: [
         { pubkey: globalAddress, isSigner: false, isWritable: false },
