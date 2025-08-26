@@ -456,6 +456,9 @@ module.exports = class Pumpfun {
     const associatedBondingCurve = getAssociatedBondingCurve(mint, bondingCurveAddress)
     const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false)
 
+    const globalVolumeAccumulator = getGlobalVolumeAccumulator()
+    const userVolumeAccumulator = getUserVolumeAccumulator(user)
+
     const instructions = []
 
     // TODO: Close? Maybe a method to recall the SOL
@@ -492,7 +495,9 @@ module.exports = class Pumpfun {
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: getCreatorVault(reserves.creator), isSigner: false, isWritable: true },
         { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
-        { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false }
+        { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false },
+        { pubkey: globalVolumeAccumulator, isSigner: false, isWritable: true },
+        { pubkey: userVolumeAccumulator, isSigner: false, isWritable: true }
       ],
       data
     }))
@@ -583,6 +588,24 @@ function getCreatorVault (creator) {
   )
 
   return creatorVault
+}
+
+function getGlobalVolumeAccumulator () {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from('global_volume_accumulator')],
+    PUMP_PROGRAM
+  )
+
+  return pda
+}
+
+function getUserVolumeAccumulator (user) {
+  const [pda] = PublicKey.findProgramAddressSync(
+    [Buffer.from('user_volume_accumulator'), new PublicKey(user).toBuffer()],
+    PUMP_PROGRAM
+  )
+
+  return pda
 }
 
 function noop () {}

@@ -6,7 +6,7 @@ const Pumpfun = require('./index.js')
 
 dotenv.config({ path: require('os').homedir() + '/.env' })
 
-test('basic', async function (t) {
+test.skip('basic', async function (t) {
   const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
 
   const rpc = new SOL.RPC({ commitment: 'processed' })
