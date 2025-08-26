@@ -1,6 +1,6 @@
 {
   "name": "like-pumpfun",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "Create, buy, and sell tokens on pump.fun (V1) easily",
   "main": "index.js",
   "files": [
