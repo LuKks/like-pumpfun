@@ -153,6 +153,32 @@ test('offline swaps', async function (t) {
   t.alike(await pump.getReserves(mint), reserves)
 })
 
+test('collect creator fees', async function (t) {
+  const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
+
+  const rpc = new SOL.RPC()
+  const pump = new Pumpfun(rpc)
+
+  await pump.ready()
+
+  const recentBlockhash = (await rpc.getLatestBlockhash()).blockhash
+
+  const ixCollect = pump.collect(user.publicKey)
+
+  const tx1 = SOL.sign(ixCollect, { unitPrice: 0.0001, signers: [user], recentBlockhash })
+
+  t.comment('Collect hash', SOL.signature(tx1))
+
+  await rpc.sendTransaction(tx1)
+})
+
+test('get vault address from creator address', async function (t) {
+  const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
+  const creatorVault = Pumpfun.vault(user.publicKey)
+
+  t.ok(creatorVault)
+})
+
 test.skip('progress', async function (t) {
   const rpc = new SOL.RPC({ commitment: 'processed' })
   const pump = new Pumpfun(rpc)

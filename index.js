@@ -116,6 +116,10 @@ module.exports = class Pumpfun {
     }
   }
 
+  static vault (creator) {
+    return getCreatorVault(creator).toString()
+  }
+
   async ready () {
     if (this.opening) return this.opening
 
@@ -550,6 +554,28 @@ module.exports = class Pumpfun {
     }))
 
     return instructions
+  }
+
+  collect (creator) {
+    creator = new PublicKey(creator)
+
+    const creatorVault = getCreatorVault(creator)
+
+    const data = Buffer.concat([
+      Borsh.discriminator('global', 'collect_creator_fee')
+    ])
+
+    return [new TransactionInstruction({
+      programId: this.programId,
+      keys: [
+        { pubkey: creator, isSigner: false, isWritable: true },
+        { pubkey: creatorVault, isSigner: false, isWritable: true },
+        { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
+        { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false }
+      ],
+      data
+    })]
   }
 }
 
