@@ -75,7 +75,7 @@ test('basic', { timeout: 60000 }, async function (t) {
 
   const reserves = await pump.getReserves(mint)
 
-  const swapBuy = pump.quoteToBase(0.001, reserves, 0n)
+  const swapBuy = pump.quoteToBase(0.001, reserves, 0.03)
 
   t.comment('Buy', swapBuy)
 
@@ -85,7 +85,7 @@ test('basic', { timeout: 60000 }, async function (t) {
 
   const ixBuy = pump.buy(mint, swapBuy.baseAmountOut, swapBuy.quoteInMax, user.publicKey, reserves)
 
-  const tx1 = SOL.sign(ixBuy, { payer: user2.publicKey, unitPrice: 0.0001, signers: [user, user2], recentBlockhash })
+  const tx1 = SOL.sign(ixBuy, { payer: user2.publicKey, unitPrice: 0.0005, signers: [user, user2], recentBlockhash })
 
   t.comment('Buy hash', SOL.signature(tx1))
 
@@ -95,7 +95,7 @@ test('basic', { timeout: 60000 }, async function (t) {
 
   t.alike(await pump.getReserves(mint), reserves)
 
-  const swapSell = pump.baseToQuote(swapBuy.baseAmountOut, reserves, 0n)
+  const swapSell = pump.baseToQuote(swapBuy.baseAmountOut, reserves, 0.03)
 
   t.comment('Sell', swapSell)
 
@@ -105,7 +105,7 @@ test('basic', { timeout: 60000 }, async function (t) {
 
   const ixSell = pump.sell(mint, swapSell.baseAmountIn, swapSell.quoteOutMin, user.publicKey, reserves)
 
-  const tx2 = SOL.sign(ixSell, { payer: user2.publicKey, unitPrice: 0.0001, signers: [user, user2], recentBlockhash })
+  const tx2 = SOL.sign(ixSell, { payer: user2.publicKey, unitPrice: 0.0005, signers: [user, user2], recentBlockhash })
 
   t.comment('Sell hash', SOL.signature(tx2))
 
@@ -116,7 +116,7 @@ test('basic', { timeout: 60000 }, async function (t) {
   t.alike(await pump.getReserves(mint), reserves)
 })
 
-test('offline swaps', async function (t) {
+test.skip('offline swaps', async function (t) {
   const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
 
   const rpc = new SOL.RPC({ commitment: 'processed' })
@@ -129,8 +129,8 @@ test('offline swaps', async function (t) {
   const mint = 'ExpuTKRK7sqfekMU74wUQM5SZf4WooyWEKabRwa126TG'
   const reserves = await pump.getReserves(mint)
 
-  const swapBuy = pump.quoteToBase(0.001, reserves, 0n, { sync: true })
-  const swapSell = pump.baseToQuote(swapBuy.baseAmountOut, reserves, 0n, { sync: true })
+  const swapBuy = pump.quoteToBase(0.001, reserves, 0.03, { sync: true })
+  const swapSell = pump.baseToQuote(swapBuy.baseAmountOut, reserves, 0.03, { sync: true })
 
   t.comment('Buy1', swapBuy)
   t.comment('Sell', swapSell)

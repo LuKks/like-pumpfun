@@ -11,6 +11,7 @@ const SYSVAR_RENT_PUBKEY = new PublicKey('SysvarRent1111111111111111111111111111
 const PUMP_PROGRAM = new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P')
 const PUMP_EVENT_AUTHORITY = new PublicKey('Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1')
 const PUMP_FEE_RECEIPT = new PublicKey('CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM')
+const PUMP_FEE_PROGRAM_ID = new PublicKey('pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ')
 
 const METAPLEX_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
 
@@ -98,7 +99,8 @@ module.exports = class Pumpfun {
         'FWsW1xNtWscwNmKv6wVsU1iTzRN6wmmk3MjxRP5tT7hz',
         'G5UZAVbAf46s7cKWoyKu8kYTip9DGTpbLZ2qa9Aq69dP'
       ],
-      setCreatorAuthority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg'
+      setCreatorAuthority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
+      adminSetCreatorAuthority: 'UqN2p5bAzBqYdHXcgB6WLtuVrdvmy9JSAtgqZb3CMKw'
     }
   }
 
@@ -501,7 +503,9 @@ module.exports = class Pumpfun {
         { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
         { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false },
         { pubkey: globalVolumeAccumulator, isSigner: false, isWritable: true },
-        { pubkey: userVolumeAccumulator, isSigner: false, isWritable: true }
+        { pubkey: userVolumeAccumulator, isSigner: false, isWritable: true },
+        { pubkey: getFeeConfig(), isSigner: false, isWritable: false },
+        { pubkey: PUMP_FEE_PROGRAM_ID, isSigner: false, isWritable: true }
       ],
       data
     }))
@@ -548,7 +552,9 @@ module.exports = class Pumpfun {
         { pubkey: getCreatorVault(reserves.creator), isSigner: false, isWritable: true },
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
-        { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false }
+        { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false },
+        { pubkey: getFeeConfig(), isSigner: false, isWritable: false },
+        { pubkey: PUMP_FEE_PROGRAM_ID, isSigner: false, isWritable: true }
       ],
       data
     }))
@@ -630,6 +636,15 @@ function getUserVolumeAccumulator (user) {
     [Buffer.from('user_volume_accumulator'), new PublicKey(user).toBuffer()],
     PUMP_PROGRAM
   )
+
+  return pda
+}
+
+function getFeeConfig () {
+  const [pda] = PublicKey.findProgramAddressSync([
+    Buffer.from('fee_config'),
+    Buffer.from([1, 86, 224, 246, 147, 102, 90, 207, 68, 219, 21, 104, 191, 23, 91, 170, 81, 137, 203, 151, 245, 210, 255, 59, 101, 93, 43, 182, 253, 109, 24, 176])
+  ], PUMP_FEE_PROGRAM_ID)
 
   return pda
 }
