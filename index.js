@@ -583,6 +583,26 @@ module.exports = class Pumpfun {
       data
     })]
   }
+
+  async getCreatorVaultBalance (creator) {
+    const creatorVault = getCreatorVault(creator)
+    const accountInfo = await this.rpc.getAccountInfo(creatorVault)
+
+    if (accountInfo === null) {
+      return 0n
+    }
+
+    const rentExemptionLamports = await this.rpc.request('getMinimumBalanceForRentExemption', [accountInfo.data.length])
+
+    const balance = BigInt(accountInfo.lamports)
+    const rentExemption = BigInt(rentExemptionLamports)
+
+    if (balance < rentExemption) {
+      return 0n
+    }
+
+    return balance - rentExemption
+  }
 }
 
 function getMetadataAddress (mint) {

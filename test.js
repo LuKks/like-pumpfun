@@ -179,6 +179,19 @@ test('get vault address from creator address', async function (t) {
   t.ok(creatorVault)
 })
 
+test('get creator fees', async function (t) {
+  const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
+
+  const rpc = new SOL.RPC()
+  const pump = new Pumpfun(rpc)
+
+  await pump.ready()
+
+  const fees = await pump.getCreatorVaultBalance(user.publicKey)
+
+  t.ok(fees === 0n || fees > 0n)
+})
+
 test.skip('progress', async function (t) {
   const rpc = new SOL.RPC({ commitment: 'processed' })
   const pump = new Pumpfun(rpc)
