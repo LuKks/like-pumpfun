@@ -159,19 +159,11 @@ Returns:
 }
 ```
 
-#### `ix = pumpfun.buy(mint, baseAmountOut, quoteInMax, userPublicKey, reserves[, options])`
+#### `ix = pumpfun.buy(mint, baseAmountOut, quoteInMax, userPublicKey, reserves)`
 
 Create buy instructions.
 
 Note: Reserves here specifically only needs `{ creator }`.
-
-Options:
-
-```js
-{
-  trackVolume: true
-}
-```
 
 ## Sell
 
