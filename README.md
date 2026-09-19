@@ -114,11 +114,11 @@ Returns:
 
 ```js
 {
-  virtualTokenReserves: BigInt,
-  virtualSolReserves: BigInt,
-  realTokenReserves: BigInt,
-  realSolReserves: BigInt,
-  tokenTotalSupply: BigInt,
+  virtual_token_reserves: BigInt,
+  virtual_sol_reserves: BigInt,
+  real_token_reserves: BigInt,
+  real_sol_reserves: BigInt,
+  token_total_supply: BigInt,
   complete: Boolean,
   creator: String // Base58 public key
 }
@@ -159,11 +159,19 @@ Returns:
 }
 ```
 
-#### `ix = pumpfun.buy(mint, baseAmountOut, quoteInMax, userPublicKey, reserves)`
+#### `ix = pumpfun.buy(mint, baseAmountOut, quoteInMax, userPublicKey, reserves[, options])`
 
 Create buy instructions.
 
 Note: Reserves here specifically only needs `{ creator }`.
+
+Options:
+
+```js
+{
+  trackVolume: true
+}
+```
 
 ## Sell
 
@@ -259,11 +267,11 @@ Returns:
 
 ```js
 {
-  virtualTokenReserves: 1073000000000000n,
-  virtualSolReserves: 30000000000n,
-  realTokenReserves: 793100000000000n,
-  realSolReserves: 0n,
-  tokenTotalSupply: 1000000000000000n,
+  virtual_token_reserves: 1073000000000000n,
+  virtual_sol_reserves: 30000000000n,
+  real_token_reserves: 793100000000000n,
+  real_sol_reserves: 0n,
+  token_total_supply: 1000000000000000n,
   complete: false,
   creator: String // From the options
 }

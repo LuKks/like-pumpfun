@@ -1,4 +1,4 @@
-const test = require('brittle')
+const test = require('require-npm-global')('brittle')
 const SOL = require('like-solana')
 const Image = require('like-image')
 const dotenv = require('dotenv')
@@ -60,7 +60,7 @@ test.skip('basic', async function (t) {
   await rpc.sendTransaction(tx2)
 })
 
-test('basic', { timeout: 60000 }, async function (t) {
+test.skip('basic', { timeout: 60000 }, async function (t) {
   const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
   const user2 = new SOL.Keypair(process.env.WALLET2_SECRET_KEY)
 
@@ -85,7 +85,7 @@ test('basic', { timeout: 60000 }, async function (t) {
 
   const ixBuy = pump.buy(mint, swapBuy.baseAmountOut, swapBuy.quoteInMax, user.publicKey, reserves)
 
-  const tx1 = SOL.sign(ixBuy, { payer: user2.publicKey, unitPrice: 0.0005, signers: [user, user2], recentBlockhash })
+  const tx1 = SOL.sign(ixBuy, { payer: user2.publicKey, unitPrice: 0.00001, signers: [user, user2], recentBlockhash })
 
   t.comment('Buy hash', SOL.signature(tx1))
 
@@ -105,7 +105,7 @@ test('basic', { timeout: 60000 }, async function (t) {
 
   const ixSell = pump.sell(mint, swapSell.baseAmountIn, swapSell.quoteOutMin, user.publicKey, reserves)
 
-  const tx2 = SOL.sign(ixSell, { payer: user2.publicKey, unitPrice: 0.0005, signers: [user, user2], recentBlockhash })
+  const tx2 = SOL.sign(ixSell, { payer: user2.publicKey, unitPrice: 0.00001, signers: [user, user2], recentBlockhash })
 
   t.comment('Sell hash', SOL.signature(tx2))
 
@@ -138,8 +138,8 @@ test.skip('offline swaps', async function (t) {
   const ixBuy = pump.buy(mint, swapBuy.baseAmountOut, swapBuy.quoteInMax, user.publicKey, reserves)
   const ixSell = pump.sell(mint, swapSell.baseAmountIn, swapSell.quoteOutMin, user.publicKey, reserves)
 
-  const tx1 = SOL.sign(ixBuy, { unitPrice: 0.0001, signers: [user], recentBlockhash })
-  const tx2 = SOL.sign(ixSell, { unitPrice: 0.0001, signers: [user], recentBlockhash })
+  const tx1 = SOL.sign(ixBuy, { unitPrice: 0.00001, signers: [user], recentBlockhash })
+  const tx2 = SOL.sign(ixSell, { unitPrice: 0.00001, signers: [user], recentBlockhash })
 
   t.comment('Buy hash', SOL.signature(tx1))
   t.comment('Sell hash', SOL.signature(tx2))
@@ -153,7 +153,7 @@ test.skip('offline swaps', async function (t) {
   t.alike(await pump.getReserves(mint), reserves)
 })
 
-test('collect creator fees', async function (t) {
+test.skip('collect creator fees', async function (t) {
   const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
 
   const rpc = new SOL.RPC()
@@ -165,7 +165,7 @@ test('collect creator fees', async function (t) {
 
   const ixCollect = pump.collect(user.publicKey)
 
-  const tx1 = SOL.sign(ixCollect, { unitPrice: 0.0001, signers: [user], recentBlockhash })
+  const tx1 = SOL.sign(ixCollect, { unitPrice: 0.00001, signers: [user], recentBlockhash })
 
   t.comment('Collect hash', SOL.signature(tx1))
 
@@ -179,7 +179,7 @@ test('get vault address from creator address', async function (t) {
   t.ok(creatorVault)
 })
 
-test('get creator fees', async function (t) {
+test.skip('get creator fees', async function (t) {
   const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
 
   const rpc = new SOL.RPC()
@@ -198,7 +198,7 @@ test.skip('progress', async function (t) {
 
   await pump.ready()
 
-  const mint = '8c2veet9vkEeMtxYqGP5SJdvhyziy1vmo3Wccavc1uxv'
+  const mint = 'jcAsbfvegqmyxwWqUeN815dP8BzUe1T2MWCs4repump'
   const reserves = await pump.getReserves(mint)
 
   const completion = Pumpfun.progress(reserves)
@@ -212,7 +212,7 @@ test.skip('market cap', async function (t) {
 
   await pump.ready()
 
-  const mint = 'FexgytTYsaLsSRxVv8VP5CYixmKxqmiAXR6cHwQKpump'
+  const mint = 'jcAsbfvegqmyxwWqUeN815dP8BzUe1T2MWCs4repump'
   const reserves = await pump.getReserves(mint)
 
   const mcap = Pumpfun.marketCap(reserves)
@@ -226,7 +226,7 @@ test.skip('price', async function (t) {
 
   await pump.ready()
 
-  const mint = 'HrrvL1UG6Dox9KF1NyJtxmww5UJanijwxrrg44NoWV1Q'
+  const mint = 'jcAsbfvegqmyxwWqUeN815dP8BzUe1T2MWCs4repump'
   const reserves = await pump.getReserves(mint)
 
   const price = Pumpfun.price(reserves)

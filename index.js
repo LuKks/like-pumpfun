@@ -12,6 +12,16 @@ const PUMP_PROGRAM = new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'
 const PUMP_EVENT_AUTHORITY = new PublicKey('Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1')
 const PUMP_FEE_RECEIPT = new PublicKey('CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM')
 const PUMP_FEE_PROGRAM_ID = new PublicKey('pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ')
+const PUMP_BUYBACK_FEE_RECIPIENTS = [
+  '5YxQFdt3Tr9zJLvkFccqXVUwhdTWJQc1fFg2YPbxvxeD',
+  '9M4giFFMxmFGXtc3feFzRai56WbBqehoSeRE5GK7gf7',
+  'GXPFM2caqTtQYC2cJ5yJRi9VDkpsYZXzYdwYpGnLmtDL',
+  '3BpXnfJaUTiwXnJNe7Ej1rcbzqTTQUvLShZaWazebsVR',
+  '5cjcW9wExnJJiqgLjq7DEG75Pm6JBgE1hNv4B2vHXUW6',
+  'EHAAiTxcdDwQ3U4bU6YcMsQGaekdzLS3B5SmYo46kJtL',
+  '5eHhjP8JaYkz83CWwvGU2uMUXefd3AazWGx4gpcuEEYD',
+  'A7hAgCzFw14fejgCp387JUJRMNyz4j89JKnhtKU8piqW'
+]
 
 const METAPLEX_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
 
@@ -24,6 +34,7 @@ module.exports = class Pumpfun {
     // TODO: Use structs to optimize size
     this.borsh = new Borsh(IDL_PUMP_FUN)
     this.global = Pumpfun.global()
+    this.feeConfig = null
 
     this.programId = opts.programId || PUMP_PROGRAM
 
@@ -52,45 +63,39 @@ module.exports = class Pumpfun {
 
   static progress (reserves) {
     const initialRealTokenReserves = 793100000000000n
-    const tokensSold = initialRealTokenReserves - reserves.realTokenReserves
+    const tokensSold = initialRealTokenReserves - reserves.real_token_reserves
     const ratio = (tokensSold * 1_000_000_000n) / initialRealTokenReserves
 
     return Number(ratio) / Number(1_000_000_000n)
   }
 
   static marketCap (reserves) {
-    if (reserves.virtualTokenReserves === 0n) {
-      return 0n
-    }
-
-    const tokenTotalSupply = reserves.tokenTotalSupply || 1000000000000000n
-
-    return (tokenTotalSupply * reserves.virtualSolReserves) / reserves.virtualTokenReserves
+    return getMarketCap(reserves)
   }
 
   static price (reserves) {
-    if (reserves.virtualTokenReserves === 0n) {
+    if (reserves.virtual_token_reserves === 0n) {
       return 0n
     }
 
-    return (reserves.virtualSolReserves * 1_000_000_000n) / reserves.virtualTokenReserves
+    return (reserves.virtual_sol_reserves * 1_000_000_000n) / reserves.virtual_token_reserves
   }
 
   static global () {
     return {
       initialized: true,
       authority: 'FFWtrEQ4B4PKQoVuHYzZq8FabGkVatYzDpEVHsK5rrhF',
-      feeRecipient: '62qc2CNXwrYqQScmEdiZFFAnJR262PxWEuNQtxfafNgV',
-      initialVirtualTokenReserves: 1073000000000000n,
-      initialVirtualSolReserves: 30000000000n,
-      initialRealTokenReserves: 793100000000000n,
-      tokenTotalSupply: 1000000000000000n,
-      feeBasisPoints: 95n,
-      withdrawAuthority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
-      enableMigrate: true,
-      poolMigrationFee: 15000001n,
-      creatorFeeBasisPoints: 5n,
-      feeRecipients: [
+      fee_recipient: '62qc2CNXwrYqQScmEdiZFFAnJR262PxWEuNQtxfafNgV',
+      initial_virtual_token_reserves: 1073000000000000n,
+      initial_virtual_sol_reserves: 30000000000n,
+      initial_real_token_reserves: 793100000000000n,
+      token_total_supply: 1000000000000000n,
+      fee_basis_points: 95n,
+      withdraw_authority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
+      enable_migrate: true,
+      pool_migration_fee: 15000001n,
+      creator_fee_basis_points: 30n,
+      fee_recipients: [
         '7VtfL8fvgNfhz17qKRMjzQEXgbdpnHHHQRh54R9jP2RJ',
         '7hTckgnGnLQR6sdH7YkqFTAA7VwTfYFaZ6EhEsU3saCX',
         '9rPYyANsfQZw3DnDmKE3YCQF5E8oD89UXoHn9JFEhJUz',
@@ -99,8 +104,8 @@ module.exports = class Pumpfun {
         'FWsW1xNtWscwNmKv6wVsU1iTzRN6wmmk3MjxRP5tT7hz',
         'G5UZAVbAf46s7cKWoyKu8kYTip9DGTpbLZ2qa9Aq69dP'
       ],
-      setCreatorAuthority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
-      adminSetCreatorAuthority: 'UqN2p5bAzBqYdHXcgB6WLtuVrdvmy9JSAtgqZb3CMKw'
+      set_creator_authority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
+      admin_set_creator_authority: 'UqN2p5bAzBqYdHXcgB6WLtuVrdvmy9JSAtgqZb3CMKw'
     }
   }
 
@@ -108,11 +113,11 @@ module.exports = class Pumpfun {
     const config = Pumpfun.global()
 
     return {
-      virtualTokenReserves: config.initialVirtualTokenReserves,
-      virtualSolReserves: config.initialVirtualSolReserves,
-      realTokenReserves: config.initialRealTokenReserves,
-      realSolReserves: 0n,
-      tokenTotalSupply: config.tokenTotalSupply,
+      virtual_token_reserves: config.initial_virtual_token_reserves,
+      virtual_sol_reserves: config.initial_virtual_sol_reserves,
+      real_token_reserves: config.initial_real_token_reserves,
+      real_sol_reserves: 0n,
+      token_total_supply: config.token_total_supply,
       complete: false,
       creator: opts.creator || null
     }
@@ -128,6 +133,10 @@ module.exports = class Pumpfun {
     if (!this.global) {
       this.global = await this.fetchGlobalAccount()
     }
+
+    if (!this.feeConfig && this.rpc && this.rpc.getAccountInfo) {
+      this.feeConfig = await this.fetchFeeConfig()
+    }
   }
 
   async fetchGlobalAccount () {
@@ -137,6 +146,16 @@ module.exports = class Pumpfun {
     const globalAccount = this.borsh.decode(tokenAccount.data, ['types', 'Global'])
 
     return globalAccount
+  }
+
+  async fetchFeeConfig () {
+    const accountInfo = await this.rpc.getAccountInfo(getFeeConfig())
+
+    if (!accountInfo) {
+      return null
+    }
+
+    return decodeFeeConfig(accountInfo.data)
   }
 
   async createMetadata (info) {
@@ -233,14 +252,14 @@ module.exports = class Pumpfun {
       }
     }
 
-    const n = reserves.virtualSolReserves * reserves.virtualTokenReserves
-    const i = reserves.virtualSolReserves + quoteAmountIn
+    const n = reserves.virtual_sol_reserves * reserves.virtual_token_reserves
+    const i = reserves.virtual_sol_reserves + quoteAmountIn
     const r = n / i + 1n
-    const s = reserves.virtualTokenReserves - r
+    const s = reserves.virtual_token_reserves - r
 
-    const baseAmountOut = s < reserves.realTokenReserves ? s : reserves.realTokenReserves
+    const baseAmountOut = s < reserves.real_token_reserves ? s : reserves.real_token_reserves
 
-    const fee = (quoteAmountIn * (this.global.feeBasisPoints + this.global.creatorFeeBasisPoints)) / 10000n
+    const fee = (quoteAmountIn * getFeeBasisPoints(this.global, this.feeConfig, reserves)) / 10000n
     const userQuoteAmountIn = quoteAmountIn + fee
     const quoteInMax = calculateSlippage(userQuoteAmountIn, normalizeSlippage(slippage || 0n))
 
@@ -273,8 +292,9 @@ module.exports = class Pumpfun {
       }
     }
 
-    const n = (baseAmountIn * reserves.virtualSolReserves) / (reserves.virtualTokenReserves + baseAmountIn)
-    const a = ((10_000n - (this.global.feeBasisPoints + this.global.creatorFeeBasisPoints)) * 1_000_000_000n) / 10_000n
+    const n = (baseAmountIn * reserves.virtual_sol_reserves) / (reserves.virtual_token_reserves + baseAmountIn)
+    const feeBasisPoints = getFeeBasisPoints(this.global, this.feeConfig, reserves)
+    const a = ((10_000n - feeBasisPoints) * 1_000_000_000n) / 10_000n
 
     const quoteAmountOut = n
     const userQuoteAmountOut = (n * a) / 1_000_000_000n
@@ -309,13 +329,13 @@ module.exports = class Pumpfun {
       }
     }
 
-    if (baseAmountOut >= reserves.virtualTokenReserves) {
+    if (baseAmountOut >= reserves.virtual_token_reserves) {
       throw new Error('Not enough tokens in the pool')
     }
 
-    const quoteAmountIn = (reserves.virtualSolReserves * baseAmountOut) / (reserves.virtualTokenReserves - baseAmountOut)
+    const quoteAmountIn = (reserves.virtual_sol_reserves * baseAmountOut) / (reserves.virtual_token_reserves - baseAmountOut)
 
-    const fee = (quoteAmountIn * (this.global.feeBasisPoints + this.global.creatorFeeBasisPoints)) / 10000n
+    const fee = (quoteAmountIn * getFeeBasisPoints(this.global, this.feeConfig, reserves)) / 10000n
     const userQuoteAmountIn = quoteAmountIn + fee
     const quoteInMax = calculateSlippage(userQuoteAmountIn, normalizeSlippage(slippage || 0n))
 
@@ -358,25 +378,25 @@ module.exports = class Pumpfun {
   }
 
   static sync (swap, reserves) {
-    if (swap.solAmount || swap.tokenAmount || swap.solAmount === 0n || swap.tokenAmount === 0n) {
+    if (swap.sol_amount || swap.token_amount || swap.sol_amount === 0n || swap.token_amount === 0n) {
       const trade = swap
 
       // Buy (SOL -> TOKEN)
-      if (trade.isBuy) {
-        reserves.realTokenReserves -= trade.tokenAmount
-        reserves.realSolReserves += trade.solAmount
+      if (trade.is_buy) {
+        reserves.real_token_reserves -= trade.token_amount
+        reserves.real_sol_reserves += trade.sol_amount
 
-        reserves.virtualTokenReserves -= trade.tokenAmount
-        reserves.virtualSolReserves += trade.solAmount
+        reserves.virtual_token_reserves -= trade.token_amount
+        reserves.virtual_sol_reserves += trade.sol_amount
       }
 
       // Sell (TOKEN -> SOL)
-      if (!trade.isBuy) {
-        reserves.realTokenReserves += trade.tokenAmount
-        reserves.realSolReserves -= trade.solAmount
+      if (!trade.is_buy) {
+        reserves.real_token_reserves += trade.token_amount
+        reserves.real_sol_reserves -= trade.sol_amount
 
-        reserves.virtualTokenReserves += trade.tokenAmount
-        reserves.virtualSolReserves -= trade.solAmount
+        reserves.virtual_token_reserves += trade.token_amount
+        reserves.virtual_sol_reserves -= trade.sol_amount
       }
 
       return
@@ -387,43 +407,43 @@ module.exports = class Pumpfun {
 
     // Buy (SOL -> TOKEN)
     if (swap.baseAmountOut) {
-      reserves.realTokenReserves -= swap.baseAmountOut
-      reserves.realSolReserves += swap.quoteAmountIn
+      reserves.real_token_reserves -= swap.baseAmountOut
+      reserves.real_sol_reserves += swap.quoteAmountIn
 
-      reserves.virtualTokenReserves -= swap.baseAmountOut
-      reserves.virtualSolReserves += swap.quoteAmountIn
+      reserves.virtual_token_reserves -= swap.baseAmountOut
+      reserves.virtual_sol_reserves += swap.quoteAmountIn
     }
 
     // Sell (TOKEN -> SOL)
     if (swap.baseAmountIn) {
-      reserves.realTokenReserves += swap.baseAmountIn
-      reserves.realSolReserves -= swap.quoteAmountOut
+      reserves.real_token_reserves += swap.baseAmountIn
+      reserves.real_sol_reserves -= swap.quoteAmountOut
 
-      reserves.virtualTokenReserves += swap.baseAmountIn
-      reserves.virtualSolReserves -= swap.quoteAmountOut
+      reserves.virtual_token_reserves += swap.baseAmountIn
+      reserves.virtual_sol_reserves -= swap.quoteAmountOut
     }
   }
 
   static unsync (swap, reserves) {
-    if (swap.solAmount || swap.tokenAmount || swap.solAmount === 0n || swap.tokenAmount === 0n) {
+    if (swap.sol_amount || swap.token_amount || swap.sol_amount === 0n || swap.token_amount === 0n) {
       const trade = swap
 
       // Buy (SOL -> TOKEN)
-      if (trade.isBuy) {
-        reserves.realTokenReserves += trade.tokenAmount
-        reserves.realSolReserves -= trade.solAmount
+      if (trade.is_buy) {
+        reserves.real_token_reserves += trade.token_amount
+        reserves.real_sol_reserves -= trade.sol_amount
 
-        reserves.virtualTokenReserves += trade.tokenAmount
-        reserves.virtualSolReserves -= trade.solAmount
+        reserves.virtual_token_reserves += trade.token_amount
+        reserves.virtual_sol_reserves -= trade.sol_amount
       }
 
       // Sell (TOKEN -> SOL)
-      if (!trade.isBuy) {
-        reserves.realTokenReserves -= trade.tokenAmount
-        reserves.realSolReserves += trade.solAmount
+      if (!trade.is_buy) {
+        reserves.real_token_reserves -= trade.token_amount
+        reserves.real_sol_reserves += trade.sol_amount
 
-        reserves.virtualTokenReserves -= trade.tokenAmount
-        reserves.virtualSolReserves += trade.solAmount
+        reserves.virtual_token_reserves -= trade.token_amount
+        reserves.virtual_sol_reserves += trade.sol_amount
       }
 
       return
@@ -434,24 +454,24 @@ module.exports = class Pumpfun {
 
     // Buy (SOL -> TOKEN)
     if (swap.baseAmountOut) {
-      reserves.realTokenReserves += swap.baseAmountOut
-      reserves.realSolReserves -= swap.quoteAmountIn
+      reserves.real_token_reserves += swap.baseAmountOut
+      reserves.real_sol_reserves -= swap.quoteAmountIn
 
-      reserves.virtualTokenReserves += swap.baseAmountOut
-      reserves.virtualSolReserves -= swap.quoteAmountIn
+      reserves.virtual_token_reserves += swap.baseAmountOut
+      reserves.virtual_sol_reserves -= swap.quoteAmountIn
     }
 
     // Sell (TOKEN -> SOL)
     if (swap.baseAmountIn) {
-      reserves.realTokenReserves -= swap.baseAmountIn
-      reserves.realSolReserves += swap.quoteAmountOut
+      reserves.real_token_reserves -= swap.baseAmountIn
+      reserves.real_sol_reserves += swap.quoteAmountOut
 
-      reserves.virtualTokenReserves -= swap.baseAmountIn
-      reserves.virtualSolReserves += swap.quoteAmountOut
+      reserves.virtual_token_reserves -= swap.baseAmountIn
+      reserves.virtual_sol_reserves += swap.quoteAmountOut
     }
   }
 
-  buy (mint, baseOut, quoteInMax, user, reserves) {
+  buy (mint, baseOut, quoteInMax, user, reserves, opts = {}) {
     mint = new PublicKey(mint)
     user = new PublicKey(user)
 
@@ -460,10 +480,13 @@ module.exports = class Pumpfun {
 
     const bondingCurveAddress = getBondingCurve(mint)
     const associatedBondingCurve = getAssociatedBondingCurve(mint, bondingCurveAddress)
+    const bondingCurveV2Address = getBondingCurveV2(mint)
+    const buybackFeeRecipient = getBuybackFeeRecipient()
     const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false)
 
     const globalVolumeAccumulator = getGlobalVolumeAccumulator()
     const userVolumeAccumulator = getUserVolumeAccumulator(user)
+    const trackVolume = opts.trackVolume !== false
 
     const instructions = []
 
@@ -473,14 +496,15 @@ module.exports = class Pumpfun {
     const globalAddress = PublicKey.findProgramAddressSync([Buffer.from('global')], PUMP_PROGRAM)[0]
 
     // Optional hook for external encoding
-    let data = !this._encode ? null : this._encode('buy', { baseOut, quoteInMax })
+    let data = !this._encode ? null : this._encode('buy', { baseOut, quoteInMax, trackVolume })
 
     if (!data) {
       // TODO: Borsh needs auto-encoding for args
       data = Buffer.concat([
         Borsh.discriminator('global', 'buy'),
         Buffer.alloc(8),
-        Buffer.alloc(8)
+        Buffer.alloc(8),
+        borshEncodeOptionBool(trackVolume)
       ])
       data.writeBigUInt64LE(baseOut, 8)
       data.writeBigUInt64LE(quoteInMax, 16)
@@ -505,7 +529,9 @@ module.exports = class Pumpfun {
         { pubkey: globalVolumeAccumulator, isSigner: false, isWritable: true },
         { pubkey: userVolumeAccumulator, isSigner: false, isWritable: true },
         { pubkey: getFeeConfig(), isSigner: false, isWritable: false },
-        { pubkey: PUMP_FEE_PROGRAM_ID, isSigner: false, isWritable: true }
+        { pubkey: PUMP_FEE_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: bondingCurveV2Address, isSigner: false, isWritable: false },
+        { pubkey: buybackFeeRecipient, isSigner: false, isWritable: true }
       ],
       data
     }))
@@ -519,6 +545,8 @@ module.exports = class Pumpfun {
 
     const bondingCurveAddress = getBondingCurve(mint)
     const associatedBondingCurve = getAssociatedBondingCurve(mint, bondingCurveAddress)
+    const bondingCurveV2Address = getBondingCurveV2(mint)
+    const buybackFeeRecipient = getBuybackFeeRecipient()
     const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false)
 
     const instructions = []
@@ -554,7 +582,9 @@ module.exports = class Pumpfun {
         { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
         { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false },
         { pubkey: getFeeConfig(), isSigner: false, isWritable: false },
-        { pubkey: PUMP_FEE_PROGRAM_ID, isSigner: false, isWritable: true }
+        { pubkey: PUMP_FEE_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: bondingCurveV2Address, isSigner: false, isWritable: false },
+        { pubkey: buybackFeeRecipient, isSigner: false, isWritable: true }
       ],
       data
     }))
@@ -627,6 +657,15 @@ function getBondingCurve (mint) {
   return bondingCurve
 }
 
+function getBondingCurveV2 (mint) {
+  const [bondingCurve] = PublicKey.findProgramAddressSync(
+    [Buffer.from('bonding-curve-v2'), new PublicKey(mint).toBuffer()],
+    PUMP_PROGRAM
+  )
+
+  return bondingCurve
+}
+
 function getAssociatedBondingCurve (mint, bondingCurve) {
   const associatedBondingCurve = TokenProgram.getAssociatedTokenAddressSync(mint, bondingCurve, true)
 
@@ -669,6 +708,112 @@ function getFeeConfig () {
   return pda
 }
 
+function getBuybackFeeRecipient () {
+  const index = Math.floor(Math.random() * PUMP_BUYBACK_FEE_RECIPIENTS.length)
+
+  return new PublicKey(PUMP_BUYBACK_FEE_RECIPIENTS[index])
+}
+
+function decodeFeeConfig (data) {
+  if (Array.isArray(data)) data = Buffer.from(data[0], data[1] || 'base64')
+  if (typeof data === 'string') data = Buffer.from(data, 'base64')
+
+  const discriminator = Borsh.discriminator('account', 'FeeConfig')
+
+  if (!data.slice(0, 8).equals(discriminator)) {
+    throw new Error('FeeConfig discriminator mismatch')
+  }
+
+  let offset = 8
+  const bump = data.readUInt8(offset)
+  offset += 1
+
+  const admin = new PublicKey(data.slice(offset, offset + 32)).toString()
+  offset += 32
+
+  const flatFees = readFees(data, offset)
+  offset = flatFees.offset
+
+  const feeTierCount = data.readUInt32LE(offset)
+  offset += 4
+
+  const feeTiers = []
+
+  for (let i = 0; i < feeTierCount; i++) {
+    const marketCapLamportsThreshold = readU128LE(data, offset)
+    offset += 16
+
+    const fees = readFees(data, offset)
+    offset = fees.offset
+
+    feeTiers.push({
+      market_cap_lamports_threshold: marketCapLamportsThreshold,
+      fees: fees.value
+    })
+  }
+
+  return {
+    bump,
+    admin,
+    flat_fees: flatFees.value,
+    fee_tiers: feeTiers
+  }
+}
+
+function getFeeBasisPoints (global, feeConfig, reserves) {
+  if (!feeConfig) {
+    return global.fee_basis_points + global.creator_fee_basis_points
+  }
+
+  const marketCap = getMarketCap(reserves)
+  const fees = calculateFeeTier(feeConfig.fee_tiers, marketCap)
+
+  return fees.protocol_fee_bps + fees.creator_fee_bps
+}
+
+function calculateFeeTier (feeTiers, marketCap) {
+  const firstTier = feeTiers[0]
+
+  if (marketCap < firstTier.market_cap_lamports_threshold) {
+    return firstTier.fees
+  }
+
+  for (const tier of feeTiers.slice().reverse()) {
+    if (marketCap >= tier.market_cap_lamports_threshold) {
+      return tier.fees
+    }
+  }
+
+  return firstTier.fees
+}
+
+function getMarketCap (reserves) {
+  if (reserves.virtual_token_reserves === 0n) {
+    return 0n
+  }
+
+  const tokenTotalSupply = reserves.token_total_supply || 1000000000000000n
+
+  return (tokenTotalSupply * reserves.virtual_sol_reserves) / reserves.virtual_token_reserves
+}
+
+function readFees (data, offset) {
+  const value = {
+    lp_fee_bps: data.readBigUInt64LE(offset),
+    protocol_fee_bps: data.readBigUInt64LE(offset + 8),
+    creator_fee_bps: data.readBigUInt64LE(offset + 16)
+  }
+
+  return { value, offset: offset + 24 }
+}
+
+function readU128LE (data, offset) {
+  const low = data.readBigUInt64LE(offset)
+  const high = data.readBigUInt64LE(offset + 8)
+
+  return (high << 64n) + low
+}
+
 function noop () {}
 
 function normalizeSlippage (slippage) {
@@ -706,4 +851,12 @@ function borshEncodeString (str) {
   length.writeUInt32LE(value.length, 0)
 
   return Buffer.concat([length, value])
+}
+
+function borshEncodeOptionBool (value) {
+  if (value === undefined || value === null) {
+    return Buffer.from([0])
+  }
+
+  return Buffer.from([1, value ? 1 : 0])
 }
