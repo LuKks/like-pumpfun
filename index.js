@@ -4,11 +4,11 @@ const TransactionInstruction = require('solana-transaction-instruction')
 const TokenProgram = require('solana-token-program')
 
 const SYSTEM_PROGRAM_ID = new PublicKey('11111111111111111111111111111111')
-const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')
+const TOKEN_2022_PROGRAM_ID = new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb')
 const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL')
-const SYSVAR_RENT_PUBKEY = new PublicKey('SysvarRent111111111111111111111111111111111')
 
 const PUMP_PROGRAM = new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P')
+const MAYHEM_PROGRAM_ID = new PublicKey('MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e')
 const PUMP_EVENT_AUTHORITY = new PublicKey('Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1')
 const PUMP_FEE_RECEIPT = new PublicKey('CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM')
 const PUMP_FEE_PROGRAM_ID = new PublicKey('pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ')
@@ -22,6 +22,8 @@ const PUMP_BUYBACK_FEE_RECIPIENTS = [
   '5eHhjP8JaYkz83CWwvGU2uMUXefd3AazWGx4gpcuEEYD',
   'A7hAgCzFw14fejgCp387JUJRMNyz4j89JKnhtKU8piqW'
 ]
+const PUMP_ADDRESS_LOOKUP_TABLE = 'Hyif6eWb8x88RVrvjPfabsgRYnwkVnyByEXTVTXbUcyP'
+const PUMP_LOOKUP_TABLE = getLookupTable()
 
 const METAPLEX_PROGRAM_ID = new PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
 
@@ -48,6 +50,9 @@ module.exports = class Pumpfun {
 
   static PROGRAM_ID = PUMP_PROGRAM
   static IDL = IDL_PUMP_FUN
+
+  static ADDRESS_LOOKUP_TABLE = PUMP_ADDRESS_LOOKUP_TABLE
+  static LOOKUP_TABLE = PUMP_LOOKUP_TABLE
 
   static getBondingCurve (mint) {
     return getBondingCurve(new PublicKey(mint))
@@ -94,7 +99,7 @@ module.exports = class Pumpfun {
       withdraw_authority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
       enable_migrate: true,
       pool_migration_fee: 15000001n,
-      creator_fee_basis_points: 30n,
+      creator_fee_basis_points: 5n,
       fee_recipients: [
         '7VtfL8fvgNfhz17qKRMjzQEXgbdpnHHHQRh54R9jP2RJ',
         '7hTckgnGnLQR6sdH7YkqFTAA7VwTfYFaZ6EhEsU3saCX',
@@ -119,6 +124,7 @@ module.exports = class Pumpfun {
       real_sol_reserves: 0n,
       token_total_supply: config.token_total_supply,
       complete: false,
+      creator_fee_bps: opts.creatorFeeBps || 0n,
       creator: opts.creator || null
     }
   }
@@ -158,65 +164,111 @@ module.exports = class Pumpfun {
     return decodeFeeConfig(accountInfo.data)
   }
 
-  async createMetadata (info) {
-    const body = new FormData()
-    const blob = new Blob([info.image], { type: 'image/png' })
+  async ipfs () {
+    const response = await fetch('https://pump.fun/api/ipfs-presign')
+    const data = await response.json()
 
-    body.append('file', blob, 'image-' + Date.now() + '.png')
-    body.append('name', info.name)
-    body.append('symbol', info.symbol)
-    body.append('description', info.description || '')
-    body.append('twitter', info.twitter || '')
-    body.append('telegram', info.telegram || '')
-    body.append('website', info.website || '')
-    body.append('showName', info.showName !== false)
+    if (!response.ok || !data.data) {
+      throw new Error('IPFS presign failed')
+    }
 
-    const response = await fetch('https://pump.fun/api/ipfs', { method: 'POST', body })
+    return data.data
+  }
+
+  async uploadFile (uploadUrl, buffer, opts = {}) {
+    const type = opts.type || 'image/png'
+    const name = opts.name || (type === 'application/json' ? 'data.json' : 'image-' + Date.now() + '.png')
+
+    const form = new FormData()
+
+    form.append('file', new Blob([buffer], { type }), name)
+    form.append('network', 'public')
+    form.append('name', name)
+
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        source: 'sdk/file'
+      },
+      body: form
+    })
 
     if (!response.ok) {
-      throw new Error('IPFS creation failed')
+      throw new Error('Upload failed: ' + response.status)
     }
 
     const data = await response.json()
 
-    return data.metadataUri
+    return data.data
+  }
+
+  async createMetadata (info) {
+    const imageUrl = await this.ipfs()
+    const image = await this.uploadFile(imageUrl, info.image)
+
+    const metadata = {
+      name: info.name,
+      symbol: info.symbol,
+      description: info.description || '',
+      image: 'https://ipfs.io/ipfs/' + image.cid,
+      showName: info.showName !== false,
+      createdOn: 'https://pump.fun'
+    }
+
+    if (info.twitter) metadata.twitter = info.twitter
+    if (info.telegram) metadata.telegram = info.telegram
+    if (info.website) metadata.website = info.website
+
+    const jsonUrl = await this.ipfs()
+    const json = await this.uploadFile(jsonUrl, Buffer.from(JSON.stringify(metadata)), { type: 'application/json' })
+
+    return 'https://ipfs.io/ipfs/' + json.cid
   }
 
   create (input, user) {
     const mint = new PublicKey(input.mint)
 
-    const metadataAddress = getMetadataAddress(mint)
     const bondingCurveAddress = getBondingCurve(mint)
     const associatedBondingCurve = getAssociatedBondingCurve(mint, bondingCurveAddress)
 
     const [mintAuthority] = PublicKey.findProgramAddressSync([Buffer.from('mint-authority')], PUMP_PROGRAM)
     const [globalAddress] = PublicKey.findProgramAddressSync([Buffer.from('global')], PUMP_PROGRAM)
+    const globalParamsAddress = getGlobalParams()
+    const solVaultAddress = getSolVault()
+    const mayhemStateAddress = getMayhemState(mint)
+    const mayhemTokenVault = getMayhemTokenVault(mint)
 
     // TODO: Borsh needs auto-encoding for args
     const data = Buffer.concat([
-      Borsh.discriminator('global', 'create'),
+      Borsh.discriminator('global', 'create_v2'),
       borshEncodeString(input.info ? input.info.name : input.name),
       borshEncodeString(input.info ? input.info.symbol : input.symbol),
       borshEncodeString(input.uri),
-      user.toBuffer()
+      user.toBuffer(),
+      Buffer.from([input.isMayhemMode ? 1 : 0]),
+      borshEncodeOptionBool(input.isCashbackEnabled === true),
+      borshEncodeOptionU64(normalizeCreatorFeeBps(input.creatorFeeBps)),
+      borshEncodeOptionBool(input.isHolderReward === true)
     ])
 
     return [new TransactionInstruction({
       programId: PUMP_PROGRAM,
-      // TODO: Use the IDL to create the keys based on "instructions->create"
+      // TODO: Use the IDL to create the keys based on "instructions->create_v2"
       keys: [
         { pubkey: mint, isSigner: true, isWritable: true },
         { pubkey: mintAuthority, isSigner: false, isWritable: false },
         { pubkey: bondingCurveAddress, isSigner: false, isWritable: true },
         { pubkey: associatedBondingCurve, isSigner: false, isWritable: true },
         { pubkey: globalAddress, isSigner: false, isWritable: false },
-        { pubkey: METAPLEX_PROGRAM_ID, isSigner: false, isWritable: false },
-        { pubkey: metadataAddress, isSigner: false, isWritable: true },
         { pubkey: user, isSigner: true, isWritable: true },
         { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
-        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-        { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+        { pubkey: MAYHEM_PROGRAM_ID, isSigner: false, isWritable: true },
+        { pubkey: globalParamsAddress, isSigner: false, isWritable: false },
+        { pubkey: solVaultAddress, isSigner: false, isWritable: true },
+        { pubkey: mayhemStateAddress, isSigner: false, isWritable: true },
+        { pubkey: mayhemTokenVault, isSigner: false, isWritable: true },
         { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
         { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false }
       ],
@@ -482,7 +534,7 @@ module.exports = class Pumpfun {
     const associatedBondingCurve = getAssociatedBondingCurve(mint, bondingCurveAddress)
     const bondingCurveV2Address = getBondingCurveV2(mint)
     const buybackFeeRecipient = getBuybackFeeRecipient()
-    const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false)
+    const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false, TOKEN_2022_PROGRAM_ID)
 
     const globalVolumeAccumulator = getGlobalVolumeAccumulator()
     const userVolumeAccumulator = getUserVolumeAccumulator(user)
@@ -491,7 +543,7 @@ module.exports = class Pumpfun {
     const instructions = []
 
     // TODO: Close? Maybe a method to recall the SOL
-    instructions.push(TokenProgram.createAssociatedTokenAccountIdempotentInstruction(user, associatedUser, user, mint))
+    instructions.push(TokenProgram.createAssociatedTokenAccountIdempotentInstruction(user, associatedUser, user, mint, TOKEN_2022_PROGRAM_ID))
 
     const globalAddress = PublicKey.findProgramAddressSync([Buffer.from('global')], PUMP_PROGRAM)[0]
 
@@ -522,7 +574,7 @@ module.exports = class Pumpfun {
         { pubkey: associatedUser, isSigner: false, isWritable: true },
         { pubkey: user, isSigner: true, isWritable: true },
         { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
-        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: getCreatorVault(reserves.creator), isSigner: false, isWritable: true },
         { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
         { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false },
@@ -547,12 +599,12 @@ module.exports = class Pumpfun {
     const associatedBondingCurve = getAssociatedBondingCurve(mint, bondingCurveAddress)
     const bondingCurveV2Address = getBondingCurveV2(mint)
     const buybackFeeRecipient = getBuybackFeeRecipient()
-    const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false)
+    const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false, TOKEN_2022_PROGRAM_ID)
 
     const instructions = []
 
     // TODO
-    instructions.push(TokenProgram.createAssociatedTokenAccountIdempotentInstruction(user, associatedUser, user, mint))
+    instructions.push(TokenProgram.createAssociatedTokenAccountIdempotentInstruction(user, associatedUser, user, mint, TOKEN_2022_PROGRAM_ID))
 
     const globalAddress = PublicKey.findProgramAddressSync([Buffer.from('global')], PUMP_PROGRAM)[0]
 
@@ -578,7 +630,7 @@ module.exports = class Pumpfun {
         { pubkey: user, isSigner: true, isWritable: true },
         { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: getCreatorVault(reserves.creator), isSigner: false, isWritable: true },
-        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
         { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false },
         { pubkey: getFeeConfig(), isSigner: false, isWritable: false },
@@ -667,9 +719,40 @@ function getBondingCurveV2 (mint) {
 }
 
 function getAssociatedBondingCurve (mint, bondingCurve) {
-  const associatedBondingCurve = TokenProgram.getAssociatedTokenAddressSync(mint, bondingCurve, true)
+  const associatedBondingCurve = TokenProgram.getAssociatedTokenAddressSync(mint, bondingCurve, true, TOKEN_2022_PROGRAM_ID)
 
   return associatedBondingCurve
+}
+
+function getGlobalParams () {
+  const [globalParams] = PublicKey.findProgramAddressSync(
+    [Buffer.from('global-params')],
+    MAYHEM_PROGRAM_ID
+  )
+
+  return globalParams
+}
+
+function getSolVault () {
+  const [solVault] = PublicKey.findProgramAddressSync(
+    [Buffer.from('sol-vault')],
+    MAYHEM_PROGRAM_ID
+  )
+
+  return solVault
+}
+
+function getMayhemState (mint) {
+  const [mayhemState] = PublicKey.findProgramAddressSync(
+    [Buffer.from('mayhem-state'), mint.toBuffer()],
+    MAYHEM_PROGRAM_ID
+  )
+
+  return mayhemState
+}
+
+function getMayhemTokenVault (mint) {
+  return TokenProgram.getAssociatedTokenAddressSync(mint, getSolVault(), true, TOKEN_2022_PROGRAM_ID)
 }
 
 function getCreatorVault (creator) {
@@ -761,14 +844,16 @@ function decodeFeeConfig (data) {
 }
 
 function getFeeBasisPoints (global, feeConfig, reserves) {
+  const customCreatorFeeBps = (reserves && reserves.creator_fee_bps) || 0n
+
   if (!feeConfig) {
-    return global.fee_basis_points + global.creator_fee_basis_points
+    return global.fee_basis_points + (customCreatorFeeBps || global.creator_fee_basis_points)
   }
 
   const marketCap = getMarketCap(reserves)
   const fees = calculateFeeTier(feeConfig.fee_tiers, marketCap)
 
-  return fees.protocol_fee_bps + fees.creator_fee_bps
+  return fees.protocol_fee_bps + (customCreatorFeeBps || fees.creator_fee_bps)
 }
 
 function calculateFeeTier (feeTiers, marketCap) {
@@ -844,6 +929,12 @@ function normalizeQuoteAmount (quoteAmountIn) {
   return quoteAmountIn
 }
 
+function normalizeCreatorFeeBps (creatorFeeBps) {
+  if (!creatorFeeBps) return 0n
+  if (typeof creatorFeeBps !== 'bigint') creatorFeeBps = BigInt(creatorFeeBps)
+  return creatorFeeBps
+}
+
 function borshEncodeString (str) {
   const length = Buffer.alloc(4)
   const value = Buffer.from(str, 'utf8')
@@ -854,9 +945,205 @@ function borshEncodeString (str) {
 }
 
 function borshEncodeOptionBool (value) {
-  if (value === undefined || value === null) {
-    return Buffer.from([0])
-  }
+  return Buffer.from([value ? 1 : 0])
+}
 
-  return Buffer.from([1, value ? 1 : 0])
+function borshEncodeOptionU64 (value) {
+  const data = Buffer.alloc(8)
+  data.writeBigUInt64LE(value)
+
+  return data
+}
+
+function getLookupTable () {
+  return {
+    key: new PublicKey('Hyif6eWb8x88RVrvjPfabsgRYnwkVnyByEXTVTXbUcyP'),
+    state: {
+      addresses: [
+        new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'),
+        new PublicKey('4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf'),
+        new PublicKey('39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg'),
+        new PublicKey('Ce6TQqeHC9p8KetsN6JsjHK7UTZk7nasjjnr7XxXp9F1'),
+        new PublicKey('Hq2wp8uJ9jCPsYgNHex8RtqdvMPfVGoYwjvF1ATiwn2Y'),
+        new PublicKey('pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'),
+        new PublicKey('GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR'),
+        new PublicKey('ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw'),
+        new PublicKey('UqN2p5bAzBqYdHXcgB6WLtuVrdvmy9JSAtgqZb3CMKw'),
+        new PublicKey('5PHirr8joyTMp9JMm6nW7hNDVyEYdkzDqazxPD7RaTjx'),
+        new PublicKey('11111111111111111111111111111111'),
+        new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'),
+        new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+        new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'),
+        new PublicKey('8Wf5TiAheLUqBrKXeYg2JtAFFMWtKdG2BSFgqUcPVwTt'),
+        new PublicKey('pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ'),
+        new PublicKey('MAyhSmzXzV1pTf7LsNkrNwkWKTo4ougAJ1PPg47MD4e'),
+        new PublicKey('Gygj9QQby4j2jryqyqBHvLP7ctv2SaANgh4sCb69BUpA'),
+        new PublicKey('13ec7XdrjF3h3YcqBTFDSReRcUFwbCnJaAQspM4j6DDJ'),
+        new PublicKey('BwWK17cbHxwWBKZkUYvzxLcNQ1YVyaFezduWbtm2de6s'),
+        new PublicKey('8FoNgzmjuSmiy86EPCWxvv1q7oJSu2WGA7wPymwki2LJ'),
+        new PublicKey('62qc2CNXwrYqQScmEdiZFFAnJR262PxWEuNQtxfafNgV'),
+        new PublicKey('7VtfL8fvgNfhz17qKRMjzQEXgbdpnHHHQRh54R9jP2RJ'),
+        new PublicKey('7hTckgnGnLQR6sdH7YkqFTAA7VwTfYFaZ6EhEsU3saCX'),
+        new PublicKey('9rPYyANsfQZw3DnDmKE3YCQF5E8oD89UXoHn9JFEhJUz'),
+        new PublicKey('AVmoTthdrX6tKt4nDjco2D775W2YK3sDhxPcMmzUAmTY'),
+        new PublicKey('CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM'),
+        new PublicKey('FWsW1xNtWscwNmKv6wVsU1iTzRN6wmmk3MjxRP5tT7hz'),
+        new PublicKey('G5UZAVbAf46s7cKWoyKu8kYTip9DGTpbLZ2qa9Aq69dP'),
+        new PublicKey('5YxQFdt3Tr9zJLvkFccqXVUwhdTWJQc1fFg2YPbxvxeD'),
+        new PublicKey('9M4giFFMxmFGXtc3feFzRai56WbBqehoSeRE5GK7gf7'),
+        new PublicKey('GXPFM2caqTtQYC2cJ5yJRi9VDkpsYZXzYdwYpGnLmtDL'),
+        new PublicKey('3BpXnfJaUTiwXnJNe7Ej1rcbzqTTQUvLShZaWazebsVR'),
+        new PublicKey('5cjcW9wExnJJiqgLjq7DEG75Pm6JBgE1hNv4B2vHXUW6'),
+        new PublicKey('EHAAiTxcdDwQ3U4bU6YcMsQGaekdzLS3B5SmYo46kJtL'),
+        new PublicKey('5eHhjP8JaYkz83CWwvGU2uMUXefd3AazWGx4gpcuEEYD'),
+        new PublicKey('A7hAgCzFw14fejgCp387JUJRMNyz4j89JKnhtKU8piqW'),
+        new PublicKey('GesfTA3X2arioaHp8bbKdjG9vJtskViWACZoYvxp4twS'),
+        new PublicKey('4budycTjhs9fD6xw62VBducVTNgMgJJ5BgtKq7mAZwn6'),
+        new PublicKey('8SBKzEQU4nLSzcwF4a74F2iaUDQyTfjGndn6qUWBnrpR'),
+        new PublicKey('4UQeTP1T39KZ9Sfxzo3WR5skgsaP6NZa87BAkuazLEKH'),
+        new PublicKey('8sNeir4QsLsJdYpc9RZacohhK1Y5FLU3nC5LXgYB4aa6'),
+        new PublicKey('Fh9HmeLNUMVCvejxCtCL2DbYaRyBFVJ5xrWkLnMH6fdk'),
+        new PublicKey('463MEnMeGyJekNZFQSTUABBEbLnvMTALbT6ZmsxAbAdq'),
+        new PublicKey('6AUH3WEHucYZyC61hqpqYUWVto5qA5hjHuNQ32GNnNxA'),
+        new PublicKey('JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU'),
+        new PublicKey('94qWNrtmfn42h3ZjUZwWvK1MEo9uVmmrBPd2hpNjYDjb'),
+        new PublicKey('BqcWAXkSdknwQxvqXYVGKtttZynYNHACPVJmTaoqgfv8'),
+        new PublicKey('EX2aKevK74xvKhMXGMLRKRJdiya32PsQDVqvpFmqM5nn'),
+        new PublicKey('7GFUN3bWzJMKMRZ34JLsvcqdssDbXnp589SiE33KVwcC'),
+        new PublicKey('3beutiWC6iV5Hz2RC711oXTqWa93rHUwsS58xWBHyTd6'),
+        new PublicKey('GcQg5EfxSLDXyXPEU5nEFqaKYHHFE6XusRWq4SvjjyYM'),
+        new PublicKey('X5QPJcpph4mBAJDzc4hRziFftSbcygV59kRb2Fu6Je1'),
+        new PublicKey('FC6zaBZjnJ1tF5nY4b2nrPgu62thjXdRkk2sEtjxU16E'),
+        new PublicKey('EuwnCQdAw3QZyimtPpcJdPXriYVKtJoRUyVbN9q4zEYJ'),
+        new PublicKey('Bvtgim23rfocUzxVX9j9QFxTbBnH8JZxnaGLCEkXvjKS'),
+        new PublicKey('C5bwoYa7RD7Prc2u36idJ3hDjTvvoXPdBdx4iYeDVaQj'),
+        new PublicKey('FWouMcev9dfqAGPF4zNJM7HBfWh3593kt7CZB2VT8fco'),
+        new PublicKey('FGptqdxjahafaCzpZ1T6EDtCzYMv7Dyn5MgBLyB3VUFW'),
+        new PublicKey('APnwGpYPQJqpndpjZFUFUrzsSU2sd2SG9qKtpXQgRimu'),
+        new PublicKey('CvqM1WftUFK23mBn2j3XdGtJTfvmgpFT1yYcb9wW61Za'),
+        new PublicKey('CGEWR6pxwgQvYKeX4pZDqpZtWYPvyTjiAsw86SNzJtGy'),
+        new PublicKey('CN371Div8bqcEqq2grrGQfBX7geFLgHATEFMNLEuQs1U'),
+        new PublicKey('9kLpkV5eGS4mF4pxQ1huRM23LjGtXwvxkzABvDUKrcVq'),
+        new PublicKey('7xQYoUjUJF1Kg6WVczoTAkaNhn5syQYcbvjmFrhjWpx'),
+        new PublicKey('2yC9PAQvtxFjdV2G79N7cGsFhitbNiEQmZ3Z6dmLWfQg'),
+        new PublicKey('7Jtig7R2h4PUxPx6NaDrFw1tqvoo8XBvZJFt4bieiWt8'),
+        new PublicKey('BWXT6RUhit9FfJQM3pBmqeFLPYmuxgmyhMGC5sGr8RbA'),
+        new PublicKey('BMqY71czEnfwxTp7zTc3Wdkushpn8VfSJ6NGZX11djM1'),
+        new PublicKey('69xfsNda5twoNVEZKFLgNzXo8Ar1icoWRQPJAA7DSKxP'),
+        new PublicKey('HjQjngTDqoHE6aaGhUqfz9aQ7WZcBRjy5xB8PScLSr8i'),
+        new PublicKey('6oCkp6gpyjxVTeL6ahMYcekN2x2pzt1KY8g2LqemaTNE'),
+        new PublicKey('GsVBKjffkB769p9tHTZWoAX3r9T6dXoDTJr3f7XutJH7'),
+        new PublicKey('GAFuhgcd328SkkBYHpfadzmef9hTGAFRCi9QoCnsZQug'),
+        new PublicKey('DxvbV1rR2hmFJ2gYGXmz7jnMPsvf39M1BWd3Ejshd3Zj'),
+        new PublicKey('9NFrxdnmedHKHs1tnhYm9G5XTJh7Lt7xN6uxgZzwQNM7'),
+        new PublicKey('AktftA98kSWAxn6kVSoqBXBELUArjKu2H9WmKB48ULFY'),
+        new PublicKey('H2CUXP4v2ZSWEFvnj9C6RbbD8cNNZPLK3H374nKARN1t'),
+        new PublicKey('BhMknQ4j9RZUbJk6GS4QJh8MSKxcqZHS2x9MZh2AH9hA'),
+        new PublicKey('6rVkF4HSgy1jrnC3HogfRgPHrq4CtLg5f11URpsC4i9D'),
+        new PublicKey('9JR4rG7BK32TVENGAcKMseS7tdoz3Y5pXeSq234MEowH'),
+        new PublicKey('9NW32ymMo8Qx6DTbgkxtnD8Dh9hssQYpcyY2Brdpg2hs'),
+        new PublicKey('GYH1Gae1wJytMSvMvw8JVcv7nuAbxi8i9erNVbERnzXd'),
+        new PublicKey('4EcDKGwpgYLVnMmjJCDrUN2DVLQKSpSKyMhqU1GbuMsv'),
+        new PublicKey('5a8Gfgwx4hrCtYKgvjtX57FsirXPRN7Jzm9aXmn6hQs8'),
+        new PublicKey('CA7v8gHfbquYXyDnDx6QxWW8hmL1H7X6Y2RYDrGLnuck'),
+        new PublicKey('EZbmj4jpfk9GGgRNfzX3e13Zo4ZaNMHQ5UUmRVcZQyEF'),
+        new PublicKey('5KUNmCZatysY7fxLtTgo2bpkqevPRZZG8fkrh3e1P89F'),
+        new PublicKey('CASRL2zkwDnppxEFQ4LgdwgR9pdz5Q8R8nEMKVZ9QoLp'),
+        new PublicKey('BJQ1HTx43bBDF1ba8GfZAfxSMZneTmQNr5m9yUfx6vAu'),
+        new PublicKey('HPfEytxa5JGqmGiVwrSepAcNTkWboxvtQKbyWN9DNCoQ'),
+        new PublicKey('qkYdTGRPHbWTWuBMz45bCiU6a23axRqf6sBHm9295WY'),
+        new PublicKey('fewxWzSMHpHhDT9c5FysEXnHXtxvWVeHPvFVTyZdPwh'),
+        new PublicKey('Gr5kHfDBd7GAdjK6Ct3EDC566XFPjCr3mLCkKVxJYrMD'),
+        new PublicKey('C93K8DX4YsABYJtHX9awzgZW3LWzBqBVezEbbLJH4yet'),
+        new PublicKey('41xY1DU1zzo893bEg2HzTFxPVVM84UvDCNsQm6aKRq8Z'),
+        new PublicKey('EjPDJxzz876H53wdSpqLzHhYJAndnNUTH1DDZjeW9DYA'),
+        new PublicKey('Bckr4rY4rUGvWtwqC9mnWN35LKzfPRcmsoMRYq6DFEjN'),
+        new PublicKey('GYahGz4ts13NYJBJfwFfMsN7aWv6mcT5D5Jd9znx18QW'),
+        new PublicKey('3KfQpgXBFPCULja9KiPdjWgAue96nJCGkaSm2TLYLjRd'),
+        new PublicKey('9tvBjCQ4m3954ESgxW9PnBPvW8afHEjKpkNEAdfN2D8U'),
+        new PublicKey('Gzc5K38syMVA8V7Q7czVJqQGxBiWhJ3iUqZdGGdSvqEP'),
+        new PublicKey('BN4Mf4jpA9Mp7ZHz1ycxGbHE319Nvf9J9onzTGHArMbi'),
+        new PublicKey('CoRuMWRuDAsjB5SDMmYEcDuyQyaH3L2vVFvwBy1FF8Kr'),
+        new PublicKey('AupmCV3PGYcm5efdXS7Yd9TvvzfUP4wKabvmFoDe9LAf'),
+        new PublicKey('DTybfXMCtn3zHchJ3y2XKmryYX6aPiVtmHsjeoyUwyiT'),
+        new PublicKey('21L1QB6DJ9HBvePgwN6jFuK3UT9mq2SgTq1oJ7D6cNiV'),
+        new PublicKey('EQkDDtyzVwY3RCBNJSd68F8c1WQP6njSbcPLpnYFoMxU'),
+        new PublicKey('GkcEY35acFg4KFNKb4R4KRQvXwzKtNYaqc3GnaMce9aG'),
+        new PublicKey('2i3uCDzDhr3pSvMPF5uBpUckLAv7XGdo2a8soiqNJMHk'),
+        new PublicKey('A9KuWNQUZBT5ZTp3HB5tKxCkSwxjUrW5fFqvk6JcKyo6'),
+        new PublicKey('SHDJe2sssE6pB5SLQdHfmdocjM3d7ZJGJthHvyxk2nC'),
+        new PublicKey('BZeq7y8ajn5Pjpy5KjEhF6eBY2H9ippTpqCtQLQPsmJf'),
+        new PublicKey('D3ANwvaijotpP2BZJTxHs7mdhKaNDZ8JgWAZRAGX5wva'),
+        new PublicKey('8jGhhtRUTR8fv16phamd1ARrhu5CvDVev9Ra39xvz1Rd'),
+        new PublicKey('ghSBUgyxyvyurm1vJBkU4rUyLJoUipCZhFeiBogKCSy'),
+        new PublicKey('8i5djNGuUXSAqang3mcQMPfAg7ynPdLLyecDx1D393od'),
+        new PublicKey('E1z4EHn9t2aMnupT5bMpKFS9qcnvbcdZWQjD1PfhaTFA'),
+        new PublicKey('DWpvfqzGWuVy9jVSKSShdM2733nrEsnnhsUStYbkj6Nn'),
+        new PublicKey('DeoTNj3a1WRSAJWgRrepxjytnMQEjB4Xm8ahK7YUrxgq'),
+        new PublicKey('6AbEmk1erKwQiDT64jTfm7jXuwhQcQQcToLQAPZFcdi5'),
+        new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+        new PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'),
+        new PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL'),
+        new PublicKey('So11111111111111111111111111111111111111112'),
+        new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+        new PublicKey('11111111111111111111111111111111'),
+        new PublicKey('ADyA8hdefvWN2dbGGWFotbzWxrAvLW83WG6QCVXvJKqw'),
+        new PublicKey('GS4CU59F31iL7aR2Q8zVS8DRrcRnXX1yjQ66TqNVQnaR'),
+        new PublicKey('Hq2wp8uJ9jCPsYgNHex8RtqdvMPfVGoYwjvF1ATiwn2Y'),
+        new PublicKey('C2aFPdENg4A2HQsmrd5rTw5TaYBX5Ku887cWjbFKtZpw'),
+        new PublicKey('pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ'),
+        new PublicKey('pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA'),
+        new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P'),
+        new PublicKey('675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8'),
+        new PublicKey('5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1'),
+        new PublicKey('58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2'),
+        new PublicKey('8BnEgHoWFysVcuFFX7QztDmzuH8r5ZFvyP3sYwn1XTh6'),
+        new PublicKey('srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'),
+        new PublicKey('DQyrAcCrDXQ7NeoqGgDCZwBvWDcYmFCjSb9JtteuvPpz'),
+        new PublicKey('HLmqeL62xR1QoZ1HKKbXRrdN1p3phKpxRMb2VVopvBBz'),
+        new PublicKey('LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj'),
+        new PublicKey('CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK'),
+        new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
+        new PublicKey('USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB'),
+        new PublicKey('G8LqPHYAMcwP14CDgk9XsV9VdwpsW3aJ59VubwnyrJVr'),
+        new PublicKey('3h2e43PunVA5K34vwKCLHWhZF4aZpyaC9RmxvshGAQpL'),
+        new PublicKey('CdpY42BTUgCmvACA8oHeCkvChKHyjqwtRbUAkpSj7xJW'),
+        new PublicKey('3KxnkzueoZiayw5kAT6o4nzyoyPxkwMdxviv7wNgVvyc'),
+        new PublicKey('vhnZNkREnWg8zRUHCi8oEuxdzHia65xDb1S7VRrQqeJ'),
+        new PublicKey('EcV3jHJdUus9xJ67iQBgQggL7Q7UPDMEi7YSDBo7PE3r'),
+        new PublicKey('D6QxXDt6hhcCpto4HiZKkN2YQ2iZRF5R7S3caCHpUsML'),
+        new PublicKey('GmFrDZT2cdrqykgTikVdXbe8EtCgzUDM9VsDhQnwsUsG'),
+        new PublicKey('AgenTMiC2hvxGebTsgmsD4HHBa8WEcqGFf87iwRRxLo7'),
+        new PublicKey('ALeLWphFxNVNXpXFEC4Ssf2Jan1Wki72Us8tXMMrQuQZ'),
+        new PublicKey('HcAR1LpgSGFxeLyb1vkhsCuN6AtxQsww3E2pMMXkwHqx'),
+        new PublicKey('E9BzZER9vhBTPjBpT9QC1NaiinSXonZWgF89HkpKJxGF'),
+        new PublicKey('FHpcNSe6tb2n15bAdq4BkeYWGyZKFD7yLYrH92ng7wCT'),
+        new PublicKey('TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM'),
+        new PublicKey('ComputeBudget111111111111111111111111111111'),
+        new PublicKey('jitodontfront111111111111111111nopainnogain'),
+        new PublicKey('7xrjio4HMDaBCXCHdFoqBUvP3epvh7DKnECpmVBZ5ZW3'),
+        new PublicKey('7Px7uigYSVP4mUyvxZ26GKvi3gtyVt7wWrhTKnZsD8HN'),
+        new PublicKey('JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4'),
+        new PublicKey('D8cy77BBepLMngZx6ZukaTff5hCt1HrWyKk3Hnd9oitf'),
+        new PublicKey('51jek4CRWUgd5m3XaQmt53RzyvFjn3LF3qEB35ZYpump'),
+        new PublicKey('H2jHE8DpRadryv3rn2ycpa2jDnBDRFG4Lzw2DB2hKKTq'),
+        new PublicKey('GXiV2QopYESCgVAVBQZkotmMTRNGCKQddfg8Uabz8L9c'),
+        new PublicKey('9e2jSsXC8pfRWYm1no4pSyB8ZVNB7qcZ3nc7YhBQbmqK'),
+        new PublicKey('HQkwugUSYotEAZAkoDabbdVueX6zZN5z5w7CDz2kq63P'),
+        new PublicKey('4tkdCMeqgUfbEmctxBb7jPNjPqKWRM65qBMZNeXvDR6v'),
+        new PublicKey('Fk8933ScEwzSjFqpXWMscRzNJaxRqmxYtL9WWRPULKTz'),
+        new PublicKey('ARcBxLfVMQKv4Ww4ZxH4RM8kXLpLhCdXTy6NN7XaLEJ4'),
+        new PublicKey('CExf3HJ6zpjg6vtwTFsxuiFzL2A9TsMc41HWmpkcRNZ'),
+        new PublicKey('FVLkDcnQ1SfCHgb1SYJ9Nk9fTwJzVdXSF9NaXgYGSNQV'),
+        new PublicKey('DCvwzHy9PgABoT6CiLwxr1PoeDUg5nveGJNzt7ZyeQVS'),
+        new PublicKey('7xJypVHchuWQWyP3EPHCmyGZpuPsovuVuGDkSSrevifz'),
+        new PublicKey('9Vz2khpbpqjffTKprxQe4uxnuvLFS3jsKV4Mnp53pzbX'),
+        new PublicKey('FBduLUSCPrxpeoM9jUWnTtdXBSAw54r8Bj11qTZitfEE'),
+        new PublicKey('6tT2L9L96HmTsbAe1JZm8DtTkmWAqaLigJkCVtSoZexo'),
+        new PublicKey('8KJidaVpdw9UQwADmUxoCJ9igEzVq1dNHWDCkStzQ5rd'),
+        new PublicKey('Hp6NgkHKaXDRcgYuA7Hno21CpNdugqUA7Z2G2CqYvhQu'),
+        new PublicKey('AXDmeVPegFeAEReLbMZ1PqEDvS4wDUqkgjMoBuknWkGp')
+      ]
+    }
+  }
 }

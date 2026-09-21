@@ -235,7 +235,11 @@ Options:
   mint: String, // Public key of the token
   name: String, // You would use the same from the metadata
   symbol: String, // Same
-  uri: String // metadataUri (IPFS)
+  uri: String, // metadataUri (IPFS)
+  isMayhemMode: Boolean, // Optional, default false
+  isCashbackEnabled: Boolean, // Optional, default false
+  creatorFeeBps: BigInt | Number, // Optional, default 0n
+  isHolderReward: Boolean // Optional, default false
 }
 ```
 

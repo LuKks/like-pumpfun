@@ -6,7 +6,7 @@ const Pumpfun = require('./index.js')
 
 dotenv.config({ path: require('os').homedir() + '/.env' })
 
-test.skip('basic', async function (t) {
+test.skip('create coin', async function (t) {
   const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
 
   const rpc = new SOL.RPC({ commitment: 'processed' })
@@ -33,7 +33,16 @@ test.skip('basic', async function (t) {
 
   t.comment('(Metadata)', uri)
 
-  const ixCreate = pump.create({ info, uri, mint }, user.publicKey)
+  const ixCreate = pump.create({
+    mint,
+    name: info.name,
+    symbol: info.symbol,
+    uri,
+    isMayhemMode: false,
+    isCashbackEnabled: false,
+    creatorFeeBps: 300n,
+    isHolderReward: false
+  }, user.publicKey)
 
   const reserves = Pumpfun.initialReserves({ creator: user.publicKey })
 
@@ -43,7 +52,7 @@ test.skip('basic', async function (t) {
   t.comment('Buy', swapBuy)
   t.comment('Buy reserves', reserves)
 
-  const tx1 = SOL.sign([...ixCreate, ...ixBuy], { unitPrice: 0.0001, signers: [user, mintKeyPair], recentBlockhash })
+  const tx1 = SOL.sign([...ixCreate, ...ixBuy], { unitPrice: 0.0001, signers: [user, mintKeyPair], recentBlockhash, legacy: false, lookupTable: Pumpfun.LOOKUP_TABLE })
 
   t.comment('Create hash', SOL.signature(tx1))
   t.comment('Mint', mint.toBase58())
@@ -232,4 +241,16 @@ test.skip('price', async function (t) {
   const price = Pumpfun.price(reserves)
 
   t.comment('Price', price)
+})
+
+test.skip('lookup table for optimized transactions', async function (t) {
+  const rpc = new SOL.RPC({ commitment: 'processed' })
+
+  const AddressLookupTableAccount = require('like-solana/lib/address-lookup-table.js')
+  const table = await AddressLookupTableAccount.load(rpc, Pumpfun.PUMP_LOOKUP_TABLE)
+
+  console.log(JSON.stringify({
+    key: table.key.toString(),
+    addresses: table.state.addresses.map(address => address.toString())
+  }, null, 2))
 })

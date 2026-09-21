@@ -22,7 +22,7 @@
   "devDependencies": {
     "dotenv": "^16.5.0",
     "like-image": "^1.0.0",
-    "like-solana": "^2.0.0",
+    "like-solana": "^2.8.8",
     "require-npm-global": "^1.0.0"
   },
   "dependencies": {
