@@ -238,6 +238,8 @@ Options:
   uri: String, // metadataUri (IPFS)
   isMayhemMode: Boolean, // Optional, default false
   isCashbackEnabled: Boolean, // Optional, default false
+  creatorFeeBps: BigInt | Number, // Optional, default 0n (0 = protocol default, max 300n)
+  isHolderReward: Boolean // Optional, default false
 }
 ```
 
@@ -251,7 +253,11 @@ Options:
 
 ```js
 {
-  creator: String
+  creator: String,
+  isCashbackEnabled: Boolean, // Optional, default false
+  quoteMint: String, // Optional
+  creatorFeeBps: BigInt | Number, // Optional, default 0n
+  isHolderReward: Boolean // Optional, default false
 }
 ```
 
@@ -265,7 +271,11 @@ Returns:
   real_quote_reserves: 0n,
   token_total_supply: 1000000000000000n,
   complete: false,
-  creator: String // From the options
+  creator: String, // From the options
+  quote_mint: String, // Optional
+  creator_fee_bps: BigInt,
+  can_edit_creator_fee: Boolean,
+  is_holder_reward: Boolean
 }
 ```
 

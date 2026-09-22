@@ -20,7 +20,7 @@ test.skip('create coin', { timeout: 60000 * 5 }, async function (t) {
 
   do {
     mintKeyPair = new SOL.Keypair()
-  } while (!mintKeyPair.publicKey.toBase58().endsWith('pump'))
+  } while (false /* !mintKeyPair.publicKey.toBase58().endsWith('pump') */)
 
   const mint = mintKeyPair.publicKey
 
@@ -45,8 +45,7 @@ test.skip('create coin', { timeout: 60000 * 5 }, async function (t) {
     name: info.name,
     symbol: info.symbol,
     uri,
-    isMayhemMode: false,
-    isCashbackEnabled: false
+    isMayhemMode: false
   }, user.publicKey)
 
   const reserves = Pumpfun.initialReserves({ creator: user.publicKey })
@@ -70,6 +69,8 @@ test.skip('create coin', { timeout: 60000 * 5 }, async function (t) {
   const ixSell = pump.sell(mint, swapSell.baseAmountIn, swapSell.quoteOutMin, user.publicKey, reserves)
 
   const tx2 = SOL.sign(ixSell, { unitPrice: 0.0001, signers: [user], recentBlockhash })
+
+  t.comment('Sell hash', SOL.signature(tx2))
 
   await rpc.sendTransaction(tx2)
 })

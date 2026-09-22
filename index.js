@@ -157,7 +157,12 @@ module.exports = class Pumpfun {
       real_quote_reserves: 0n,
       token_total_supply: config.token_total_supply,
       complete: false,
-      creator: opts.creator || null
+      creator: opts.creator || null,
+      is_cashback_coin: opts.isCashbackEnabled === true,
+      quote_mint: opts.quoteMint || null,
+      creator_fee_bps: normalizeFeeBps(opts.creatorFeeBps),
+      can_edit_creator_fee: false,
+      is_holder_reward: opts.isHolderReward === true
     }
   }
 
@@ -271,6 +276,7 @@ module.exports = class Pumpfun {
     const mayhemTokenVault = getMayhemTokenVault(mint)
 
     // TODO: Borsh needs auto-encoding for args
+    // OptionU64 and OptionBool are single value structs: u64 8 bytes, bool 1 byte
     const data = Buffer.concat([
       Borsh.discriminator('global', 'create_v2'),
       borshEncodeString(input.info ? input.info.name : input.name),
@@ -278,7 +284,9 @@ module.exports = class Pumpfun {
       borshEncodeString(input.uri),
       user.toBuffer(),
       Buffer.from([input.isMayhemMode ? 1 : 0]),
-      borshEncodeOptionBool(input.isCashbackEnabled === true)
+      borshEncodeOptionBool(input.isCashbackEnabled === true),
+      borshEncodeU64(normalizeFeeBps(input.creatorFeeBps)),
+      borshEncodeOptionBool(input.isHolderReward === true)
     ])
 
     return [new TransactionInstruction({
@@ -629,6 +637,8 @@ module.exports = class Pumpfun {
     const associatedBondingCurve = getAssociatedBondingCurve(mint, bondingCurveAddress)
     const bondingCurveV2Address = getBondingCurveV2(mint)
     const buybackFeeRecipient = getBuybackFeeRecipient()
+    const isCashback = reserves && reserves.is_cashback_coin === true
+    const userVolumeAccumulator = isCashback ? getUserVolumeAccumulator(user) : null
     const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false, TOKEN_2022_PROGRAM_ID)
 
     const instructions = []
@@ -665,6 +675,7 @@ module.exports = class Pumpfun {
         { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false },
         { pubkey: getFeeConfig(), isSigner: false, isWritable: false },
         { pubkey: PUMP_FEE_PROGRAM_ID, isSigner: false, isWritable: false },
+        ...(userVolumeAccumulator ? [{ pubkey: userVolumeAccumulator, isSigner: false, isWritable: true }] : []),
         { pubkey: bondingCurveV2Address, isSigner: false, isWritable: false },
         { pubkey: buybackFeeRecipient, isSigner: false, isWritable: true }
       ],
@@ -865,23 +876,52 @@ function decodeFeeConfig (data) {
     })
   }
 
-  return {
+  const feeConfig = {
     bump,
     admin,
     flat_fees: flatFees.value,
-    fee_tiers: feeTiers
+    fee_tiers: feeTiers,
+    stable_fee_tiers: [],
+    exotic_flat_fees: null
   }
+
+  if (offset + 4 > data.length) return feeConfig
+
+  const stableTierCount = data.readUInt32LE(offset)
+  offset += 4
+
+  for (let i = 0; i < stableTierCount; i++) {
+    const marketCapLamportsThreshold = readU128LE(data, offset)
+    offset += 16
+
+    const fees = readFees(data, offset)
+    offset = fees.offset
+
+    feeConfig.stable_fee_tiers.push({
+      market_cap_lamports_threshold: marketCapLamportsThreshold,
+      fees: fees.value
+    })
+  }
+
+  if (offset + 24 > data.length) return feeConfig
+
+  const exoticFlatFees = readFees(data, offset)
+  feeConfig.exotic_flat_fees = exoticFlatFees.value
+
+  return feeConfig
 }
 
 function getFeeBasisPoints (global, feeConfig, reserves) {
+  const customCreatorFeeBps = (reserves && reserves.creator_fee_bps) || 0n
+
   if (!feeConfig) {
-    return global.fee_basis_points + global.creator_fee_basis_points
+    return global.fee_basis_points + (customCreatorFeeBps || global.creator_fee_basis_points)
   }
 
   const marketCap = getMarketCap(reserves)
   const fees = calculateFeeTier(feeConfig.fee_tiers, marketCap)
 
-  return fees.protocol_fee_bps + fees.creator_fee_bps
+  return fees.protocol_fee_bps + (customCreatorFeeBps || fees.creator_fee_bps)
 }
 
 function calculateFeeTier (feeTiers, marketCap) {
@@ -957,6 +997,13 @@ function normalizeQuoteAmount (quoteAmountIn) {
   return quoteAmountIn
 }
 
+function normalizeFeeBps (value) {
+  if (!value) return 0n
+  if (typeof value !== 'bigint') value = BigInt(value)
+
+  return value
+}
+
 function borshEncodeString (str) {
   const length = Buffer.alloc(4)
   const value = Buffer.from(str, 'utf8')
@@ -968,6 +1015,13 @@ function borshEncodeString (str) {
 
 function borshEncodeOptionBool (value) {
   return Buffer.from([value ? 1 : 0])
+}
+
+function borshEncodeU64 (value) {
+  const data = Buffer.alloc(8)
+  data.writeBigUInt64LE(value)
+
+  return data
 }
 
 function getLookupTable () {
