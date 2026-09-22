@@ -6,7 +6,7 @@ const Pumpfun = require('./index.js')
 
 dotenv.config({ path: require('os').homedir() + '/.env' })
 
-test.skip('create coin', async function (t) {
+test.skip('create coin', { timeout: 60000 * 5 }, async function (t) {
   const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
 
   const rpc = new SOL.RPC({ commitment: 'processed' })
@@ -16,8 +16,15 @@ test.skip('create coin', async function (t) {
 
   const recentBlockhash = (await rpc.getLatestBlockhash()).blockhash
 
-  const mintKeyPair = new SOL.Keypair()
+  let mintKeyPair = null
+
+  do {
+    mintKeyPair = new SOL.Keypair()
+  } while (!mintKeyPair.publicKey.toBase58().endsWith('pump'))
+
   const mint = mintKeyPair.publicKey
+
+  t.comment(mint.toBase58())
 
   const info = {
     name: '1337',
@@ -39,9 +46,7 @@ test.skip('create coin', async function (t) {
     symbol: info.symbol,
     uri,
     isMayhemMode: false,
-    isCashbackEnabled: false,
-    creatorFeeBps: 300n,
-    isHolderReward: false
+    isCashbackEnabled: false
   }, user.publicKey)
 
   const reserves = Pumpfun.initialReserves({ creator: user.publicKey })
