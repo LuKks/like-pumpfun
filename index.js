@@ -110,7 +110,40 @@ module.exports = class Pumpfun {
         'G5UZAVbAf46s7cKWoyKu8kYTip9DGTpbLZ2qa9Aq69dP'
       ],
       set_creator_authority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
-      admin_set_creator_authority: 'UqN2p5bAzBqYdHXcgB6WLtuVrdvmy9JSAtgqZb3CMKw'
+      admin_set_creator_authority: 'UqN2p5bAzBqYdHXcgB6WLtuVrdvmy9JSAtgqZb3CMKw',
+      create_v2_enabled: true,
+      whitelist_pda: 'BwWK17cbHxwWBKZkUYvzxLcNQ1YVyaFezduWbtm2de6s',
+      reserved_fee_recipient: 'GesfTA3X2arioaHp8bbKdjG9vJtskViWACZoYvxp4twS',
+      mayhem_mode_enabled: true,
+      reserved_fee_recipients: [
+        '4budycTjhs9fD6xw62VBducVTNgMgJJ5BgtKq7mAZwn6',
+        '8SBKzEQU4nLSzcwF4a74F2iaUDQyTfjGndn6qUWBnrpR',
+        '4UQeTP1T39KZ9Sfxzo3WR5skgsaP6NZa87BAkuazLEKH',
+        '8sNeir4QsLsJdYpc9RZacohhK1Y5FLU3nC5LXgYB4aa6',
+        'Fh9HmeLNUMVCvejxCtCL2DbYaRyBFVJ5xrWkLnMH6fdk',
+        '463MEnMeGyJekNZFQSTUABBEbLnvMTALbT6ZmsxAbAdq',
+        '6AUH3WEHucYZyC61hqpqYUWVto5qA5hjHuNQ32GNnNxA'
+      ],
+      is_cashback_enabled: true,
+      buyback_fee_recipients: [
+        '5YxQFdt3Tr9zJLvkFccqXVUwhdTWJQc1fFg2YPbxvxeD',
+        '9M4giFFMxmFGXtc3feFzRai56WbBqehoSeRE5GK7gf7',
+        'GXPFM2caqTtQYC2cJ5yJRi9VDkpsYZXzYdwYpGnLmtDL',
+        '3BpXnfJaUTiwXnJNe7Ej1rcbzqTTQUvLShZaWazebsVR',
+        '5cjcW9wExnJJiqgLjq7DEG75Pm6JBgE1hNv4B2vHXUW6',
+        'EHAAiTxcdDwQ3U4bU6YcMsQGaekdzLS3B5SmYo46kJtL',
+        '5eHhjP8JaYkz83CWwvGU2uMUXefd3AazWGx4gpcuEEYD',
+        'A7hAgCzFw14fejgCp387JUJRMNyz4j89JKnhtKU8piqW'
+      ],
+      buyback_basis_points: 5000n,
+      initial_virtual_quote_reserves: 4292000000n,
+      whitelisted_quote_mints: [
+        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+      ],
+      creator_fee_configurable: true,
+      max_configurable_creator_fee_bps: 300n,
+      holder_reward_claim_authority: 'HckQ93Xqjjo8mwt5pNPWvyCTZXQZ858rvzmm7ZRrZg9t',
+      is_holder_reward_enabled: true
     }
   }
 
