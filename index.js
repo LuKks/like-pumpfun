@@ -507,7 +507,6 @@ module.exports = class Pumpfun {
   }
 
   static unsync (swap, reserves) {
-
     if (swap.sol_amount || swap.token_amount || swap.sol_amount === 0n || swap.token_amount === 0n) {
       const trade = swap
 
