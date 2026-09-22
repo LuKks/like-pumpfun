@@ -83,7 +83,7 @@ module.exports = class Pumpfun {
       return 0n
     }
 
-    return (reserves.virtual_sol_reserves * 1_000_000_000n) / reserves.virtual_token_reserves
+    return (reserves.virtual_quote_reserves * 1_000_000_000n) / reserves.virtual_token_reserves
   }
 
   static global () {
@@ -119,12 +119,11 @@ module.exports = class Pumpfun {
 
     return {
       virtual_token_reserves: config.initial_virtual_token_reserves,
-      virtual_sol_reserves: config.initial_virtual_sol_reserves,
+      virtual_quote_reserves: config.initial_virtual_sol_reserves,
       real_token_reserves: config.initial_real_token_reserves,
-      real_sol_reserves: 0n,
+      real_quote_reserves: 0n,
       token_total_supply: config.token_total_supply,
       complete: false,
-      creator_fee_bps: opts.creatorFeeBps || 0n,
       creator: opts.creator || null
     }
   }
@@ -246,9 +245,7 @@ module.exports = class Pumpfun {
       borshEncodeString(input.uri),
       user.toBuffer(),
       Buffer.from([input.isMayhemMode ? 1 : 0]),
-      borshEncodeOptionBool(input.isCashbackEnabled === true),
-      borshEncodeOptionU64(normalizeCreatorFeeBps(input.creatorFeeBps)),
-      borshEncodeOptionBool(input.isHolderReward === true)
+      borshEncodeOptionBool(input.isCashbackEnabled === true)
     ])
 
     return [new TransactionInstruction({
@@ -304,8 +301,8 @@ module.exports = class Pumpfun {
       }
     }
 
-    const n = reserves.virtual_sol_reserves * reserves.virtual_token_reserves
-    const i = reserves.virtual_sol_reserves + quoteAmountIn
+    const n = reserves.virtual_quote_reserves * reserves.virtual_token_reserves
+    const i = reserves.virtual_quote_reserves + quoteAmountIn
     const r = n / i + 1n
     const s = reserves.virtual_token_reserves - r
 
@@ -344,7 +341,7 @@ module.exports = class Pumpfun {
       }
     }
 
-    const n = (baseAmountIn * reserves.virtual_sol_reserves) / (reserves.virtual_token_reserves + baseAmountIn)
+    const n = (baseAmountIn * reserves.virtual_quote_reserves) / (reserves.virtual_token_reserves + baseAmountIn)
     const feeBasisPoints = getFeeBasisPoints(this.global, this.feeConfig, reserves)
     const a = ((10_000n - feeBasisPoints) * 1_000_000_000n) / 10_000n
 
@@ -385,7 +382,7 @@ module.exports = class Pumpfun {
       throw new Error('Not enough tokens in the pool')
     }
 
-    const quoteAmountIn = (reserves.virtual_sol_reserves * baseAmountOut) / (reserves.virtual_token_reserves - baseAmountOut)
+    const quoteAmountIn = (reserves.virtual_quote_reserves * baseAmountOut) / (reserves.virtual_token_reserves - baseAmountOut)
 
     const fee = (quoteAmountIn * getFeeBasisPoints(this.global, this.feeConfig, reserves)) / 10000n
     const userQuoteAmountIn = quoteAmountIn + fee
@@ -436,19 +433,19 @@ module.exports = class Pumpfun {
       // Buy (SOL -> TOKEN)
       if (trade.is_buy) {
         reserves.real_token_reserves -= trade.token_amount
-        reserves.real_sol_reserves += trade.sol_amount
+        reserves.real_quote_reserves += trade.sol_amount
 
         reserves.virtual_token_reserves -= trade.token_amount
-        reserves.virtual_sol_reserves += trade.sol_amount
+        reserves.virtual_quote_reserves += trade.sol_amount
       }
 
       // Sell (TOKEN -> SOL)
       if (!trade.is_buy) {
         reserves.real_token_reserves += trade.token_amount
-        reserves.real_sol_reserves -= trade.sol_amount
+        reserves.real_quote_reserves -= trade.sol_amount
 
         reserves.virtual_token_reserves += trade.token_amount
-        reserves.virtual_sol_reserves -= trade.sol_amount
+        reserves.virtual_quote_reserves -= trade.sol_amount
       }
 
       return
@@ -460,42 +457,43 @@ module.exports = class Pumpfun {
     // Buy (SOL -> TOKEN)
     if (swap.baseAmountOut) {
       reserves.real_token_reserves -= swap.baseAmountOut
-      reserves.real_sol_reserves += swap.quoteAmountIn
+      reserves.real_quote_reserves += swap.quoteAmountIn
 
       reserves.virtual_token_reserves -= swap.baseAmountOut
-      reserves.virtual_sol_reserves += swap.quoteAmountIn
+      reserves.virtual_quote_reserves += swap.quoteAmountIn
     }
 
     // Sell (TOKEN -> SOL)
     if (swap.baseAmountIn) {
       reserves.real_token_reserves += swap.baseAmountIn
-      reserves.real_sol_reserves -= swap.quoteAmountOut
+      reserves.real_quote_reserves -= swap.quoteAmountOut
 
       reserves.virtual_token_reserves += swap.baseAmountIn
-      reserves.virtual_sol_reserves -= swap.quoteAmountOut
+      reserves.virtual_quote_reserves -= swap.quoteAmountOut
     }
   }
 
   static unsync (swap, reserves) {
+
     if (swap.sol_amount || swap.token_amount || swap.sol_amount === 0n || swap.token_amount === 0n) {
       const trade = swap
 
       // Buy (SOL -> TOKEN)
       if (trade.is_buy) {
         reserves.real_token_reserves += trade.token_amount
-        reserves.real_sol_reserves -= trade.sol_amount
+        reserves.real_quote_reserves -= trade.sol_amount
 
         reserves.virtual_token_reserves += trade.token_amount
-        reserves.virtual_sol_reserves -= trade.sol_amount
+        reserves.virtual_quote_reserves -= trade.sol_amount
       }
 
       // Sell (TOKEN -> SOL)
       if (!trade.is_buy) {
         reserves.real_token_reserves -= trade.token_amount
-        reserves.real_sol_reserves += trade.sol_amount
+        reserves.real_quote_reserves += trade.sol_amount
 
         reserves.virtual_token_reserves -= trade.token_amount
-        reserves.virtual_sol_reserves += trade.sol_amount
+        reserves.virtual_quote_reserves += trade.sol_amount
       }
 
       return
@@ -507,19 +505,19 @@ module.exports = class Pumpfun {
     // Buy (SOL -> TOKEN)
     if (swap.baseAmountOut) {
       reserves.real_token_reserves += swap.baseAmountOut
-      reserves.real_sol_reserves -= swap.quoteAmountIn
+      reserves.real_quote_reserves -= swap.quoteAmountIn
 
       reserves.virtual_token_reserves += swap.baseAmountOut
-      reserves.virtual_sol_reserves -= swap.quoteAmountIn
+      reserves.virtual_quote_reserves -= swap.quoteAmountIn
     }
 
     // Sell (TOKEN -> SOL)
     if (swap.baseAmountIn) {
       reserves.real_token_reserves -= swap.baseAmountIn
-      reserves.real_sol_reserves += swap.quoteAmountOut
+      reserves.real_quote_reserves += swap.quoteAmountOut
 
       reserves.virtual_token_reserves -= swap.baseAmountIn
-      reserves.virtual_sol_reserves += swap.quoteAmountOut
+      reserves.virtual_quote_reserves += swap.quoteAmountOut
     }
   }
 
@@ -844,16 +842,14 @@ function decodeFeeConfig (data) {
 }
 
 function getFeeBasisPoints (global, feeConfig, reserves) {
-  const customCreatorFeeBps = (reserves && reserves.creator_fee_bps) || 0n
-
   if (!feeConfig) {
-    return global.fee_basis_points + (customCreatorFeeBps || global.creator_fee_basis_points)
+    return global.fee_basis_points + global.creator_fee_basis_points
   }
 
   const marketCap = getMarketCap(reserves)
   const fees = calculateFeeTier(feeConfig.fee_tiers, marketCap)
 
-  return fees.protocol_fee_bps + (customCreatorFeeBps || fees.creator_fee_bps)
+  return fees.protocol_fee_bps + fees.creator_fee_bps
 }
 
 function calculateFeeTier (feeTiers, marketCap) {
@@ -879,7 +875,7 @@ function getMarketCap (reserves) {
 
   const tokenTotalSupply = reserves.token_total_supply || 1000000000000000n
 
-  return (tokenTotalSupply * reserves.virtual_sol_reserves) / reserves.virtual_token_reserves
+  return (tokenTotalSupply * reserves.virtual_quote_reserves) / reserves.virtual_token_reserves
 }
 
 function readFees (data, offset) {
@@ -929,12 +925,6 @@ function normalizeQuoteAmount (quoteAmountIn) {
   return quoteAmountIn
 }
 
-function normalizeCreatorFeeBps (creatorFeeBps) {
-  if (!creatorFeeBps) return 0n
-  if (typeof creatorFeeBps !== 'bigint') creatorFeeBps = BigInt(creatorFeeBps)
-  return creatorFeeBps
-}
-
 function borshEncodeString (str) {
   const length = Buffer.alloc(4)
   const value = Buffer.from(str, 'utf8')
@@ -946,13 +936,6 @@ function borshEncodeString (str) {
 
 function borshEncodeOptionBool (value) {
   return Buffer.from([value ? 1 : 0])
-}
-
-function borshEncodeOptionU64 (value) {
-  const data = Buffer.alloc(8)
-  data.writeBigUInt64LE(value)
-
-  return data
 }
 
 function getLookupTable () {
