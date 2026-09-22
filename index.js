@@ -685,6 +685,166 @@ module.exports = class Pumpfun {
     return instructions
   }
 
+  async cleanup (mint, user, opts = {}) {
+    if (!this.rpc) throw new Error('RPC is required')
+
+    mint = new PublicKey(mint)
+    user = new PublicKey(user)
+
+    const instructions = []
+    const accumulator = await this.getUserVolumeAccumulator(user)
+
+    if (accumulator) {
+      const unclaimedTokens = BigInt(accumulator.totalUnclaimedTokens || 0)
+      const earned = BigInt(accumulator.cashbackEarned || 0)
+      const claimed = BigInt(accumulator.totalCashbackClaimed || 0)
+
+      if (unclaimedTokens > 0n) {
+        const globalAccumulator = await this.getGlobalVolumeAccumulatorAccount()
+        const incentiveMint = opts.incentiveMint || (globalAccumulator && globalAccumulator.mint)
+
+        if (!incentiveMint) throw new Error('Incentive mint is required to claim token incentives')
+
+        instructions.push(...this.claimTokenIncentives(incentiveMint, user, opts))
+      }
+
+      if (earned > claimed) {
+        instructions.push(...this.claimCashback(user, opts))
+      }
+    }
+
+    const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false, TOKEN_2022_PROGRAM_ID)
+    const associatedUserInfo = await this.rpc.getAccountInfo(associatedUser)
+
+    if (associatedUserInfo) {
+      instructions.push(TokenProgram.createCloseAccountInstruction(associatedUser, user, user, TOKEN_2022_PROGRAM_ID))
+    }
+
+    return instructions
+  }
+
+  async closeVolumeAccumulator (user) {
+    if (!this.rpc) throw new Error('RPC is required')
+
+    user = new PublicKey(user)
+
+    const accumulator = await this.getUserVolumeAccumulator(user)
+
+    if (!accumulator) {
+      return []
+    }
+
+    const userVolumeAccumulator = getUserVolumeAccumulator(user)
+    const data = Buffer.concat([
+      Borsh.discriminator('global', 'close_user_volume_accumulator')
+    ])
+
+    return [new TransactionInstruction({
+      programId: this.programId,
+      keys: [
+        { pubkey: user, isSigner: true, isWritable: true },
+        { pubkey: userVolumeAccumulator, isSigner: false, isWritable: true },
+        { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
+        { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false }
+      ],
+      data
+    })]
+  }
+
+  claimCashback (user, opts = {}) {
+    user = new PublicKey(user)
+
+    const userVolumeAccumulator = getUserVolumeAccumulator(user)
+    const quoteMint = opts.quoteMint ? new PublicKey(opts.quoteMint) : null
+
+    if (!quoteMint || quoteMint.toString() === SYSTEM_PROGRAM_ID.toString()) {
+      const data = Buffer.concat([
+        Borsh.discriminator('global', 'claim_cashback')
+      ])
+
+      return [new TransactionInstruction({
+        programId: this.programId,
+        keys: [
+          { pubkey: user, isSigner: false, isWritable: true },
+          { pubkey: userVolumeAccumulator, isSigner: false, isWritable: true },
+          { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+          { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
+          { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false }
+        ],
+        data
+      })]
+    }
+
+    const quoteTokenProgram = new PublicKey(opts.quoteTokenProgram || TokenProgram.TOKEN_PROGRAM_ID)
+    const associatedUserVolumeAccumulator = TokenProgram.getAssociatedTokenAddressSync(quoteMint, userVolumeAccumulator, true, quoteTokenProgram)
+    const associatedQuoteUser = TokenProgram.getAssociatedTokenAddressSync(quoteMint, user, false, quoteTokenProgram)
+
+    const data = Buffer.concat([
+      Borsh.discriminator('global', 'claim_cashback_v2')
+    ])
+
+    return [new TransactionInstruction({
+      programId: this.programId,
+      keys: [
+        { pubkey: user, isSigner: false, isWritable: true },
+        { pubkey: userVolumeAccumulator, isSigner: false, isWritable: true },
+        { pubkey: quoteMint, isSigner: false, isWritable: false },
+        { pubkey: quoteTokenProgram, isSigner: false, isWritable: false },
+        { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: associatedUserVolumeAccumulator, isSigner: false, isWritable: true },
+        { pubkey: associatedQuoteUser, isSigner: false, isWritable: true },
+        { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
+        { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false }
+      ],
+      data
+    })]
+  }
+
+  claimTokenIncentives (mint, user, opts = {}) {
+    mint = new PublicKey(mint)
+    user = new PublicKey(user)
+
+    const payer = new PublicKey(opts.payer || user)
+    const tokenProgram = new PublicKey(opts.tokenProgram || TokenProgram.TOKEN_PROGRAM_ID)
+    const userVolumeAccumulator = getUserVolumeAccumulator(user)
+    const globalVolumeAccumulator = getGlobalVolumeAccumulator()
+    const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false, tokenProgram)
+    const [globalIncentiveTokenAccount] = PublicKey.findProgramAddressSync(
+      [globalVolumeAccumulator.toBuffer(), tokenProgram.toBuffer(), mint.toBuffer()],
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    )
+
+    const data = Buffer.concat([
+      Borsh.discriminator('global', 'claim_token_incentives')
+    ])
+
+    const instructions = []
+
+    instructions.push(TokenProgram.createAssociatedTokenAccountIdempotentInstruction(payer, associatedUser, user, mint, tokenProgram))
+
+    instructions.push(new TransactionInstruction({
+      programId: this.programId,
+      keys: [
+        { pubkey: user, isSigner: false, isWritable: false },
+        { pubkey: associatedUser, isSigner: false, isWritable: true },
+        { pubkey: globalVolumeAccumulator, isSigner: false, isWritable: false },
+        { pubkey: globalIncentiveTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: userVolumeAccumulator, isSigner: false, isWritable: true },
+        { pubkey: mint, isSigner: false, isWritable: false },
+        { pubkey: tokenProgram, isSigner: false, isWritable: false },
+        { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: PUMP_EVENT_AUTHORITY, isSigner: false, isWritable: false },
+        { pubkey: PUMP_PROGRAM, isSigner: false, isWritable: false },
+        { pubkey: payer, isSigner: true, isWritable: true }
+      ],
+      data
+    }))
+
+    return instructions
+  }
+
   collect (creator) {
     creator = new PublicKey(creator)
 
@@ -725,6 +885,28 @@ module.exports = class Pumpfun {
     }
 
     return balance - rentExemption
+  }
+
+  async getUserVolumeAccumulator (user) {
+    const address = getUserVolumeAccumulator(new PublicKey(user))
+    const accountInfo = await this.rpc.getAccountInfo(address)
+
+    if (!accountInfo) {
+      return null
+    }
+
+    return this.borsh.decode(accountInfo.data, ['types', 'UserVolumeAccumulator'])
+  }
+
+  async getGlobalVolumeAccumulatorAccount () {
+    const address = getGlobalVolumeAccumulator()
+    const accountInfo = await this.rpc.getAccountInfo(address)
+
+    if (!accountInfo) {
+      return null
+    }
+
+    return this.borsh.decode(accountInfo.data, ['types', 'GlobalVolumeAccumulator'])
   }
 }
 

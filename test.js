@@ -73,6 +73,39 @@ test.skip('create coin', { timeout: 60000 * 5 }, async function (t) {
   t.comment('Sell hash', SOL.signature(tx2))
 
   await rpc.sendTransaction(tx2)
+
+  await new Promise(resolve => setTimeout(resolve, 2000))
+
+  const globalAccumulator = await pump.getGlobalVolumeAccumulatorAccount()
+  const ixCleanup = await pump.cleanup(mint, user.publicKey, { incentiveMint: globalAccumulator && globalAccumulator.mint })
+
+  const tx3 = SOL.sign(ixCleanup, { unitPrice: 0.0001, signers: [user], recentBlockhash })
+
+  t.comment('Cleanup hash', SOL.signature(tx3))
+
+  await rpc.sendTransaction(tx3)
+})
+
+test.skip('cleanup', async function (t) {
+  const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
+
+  const rpc = new SOL.RPC({ commitment: 'processed' })
+  const pump = new Pumpfun(rpc)
+
+  await pump.ready()
+
+  const recentBlockhash = (await rpc.getLatestBlockhash()).blockhash
+
+  const mint = '...'
+
+  const globalAccumulator = await pump.getGlobalVolumeAccumulatorAccount()
+  const ixCleanup = await pump.cleanup(mint, user.publicKey, { incentiveMint: globalAccumulator && globalAccumulator.mint })
+
+  const tx3 = SOL.sign(ixCleanup, { signers: [user], recentBlockhash })
+
+  t.comment('Cleanup hash', SOL.signature(tx3))
+
+  await rpc.sendTransaction(tx3)
 })
 
 test.skip('basic', { timeout: 60000 }, async function (t) {
