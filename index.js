@@ -188,7 +188,7 @@ module.exports = class Pumpfun {
 
     const globalAccount = this.borsh.decode(tokenAccount.data, ['types', 'Global'])
 
-    return globalAccount
+    return toCamelCase(globalAccount)
   }
 
   async fetchFeeConfig () {

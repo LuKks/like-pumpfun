@@ -272,6 +272,7 @@ Returns:
   tokenTotalSupply: 1000000000000000n,
   complete: false,
   creator: String, // From the options
+  isCashbackCoin: Boolean,
   quoteMint: String, // Optional
   creatorFeeBps: BigInt,
   canEditCreatorFee: Boolean,
