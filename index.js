@@ -423,7 +423,8 @@ module.exports = class Pumpfun {
       throw new Error('Not enough tokens in the pool')
     }
 
-    const quoteAmountIn = (reserves.virtual_quote_reserves * baseAmountOut) / (reserves.virtual_token_reserves - baseAmountOut)
+    const denominator = reserves.virtual_token_reserves - baseAmountOut
+    const quoteAmountIn = (reserves.virtual_quote_reserves * baseAmountOut + denominator - 1n) / denominator
 
     const fee = (quoteAmountIn * getFeeBasisPoints(this.global, this.feeConfig, reserves)) / 10000n
     const userQuoteAmountIn = quoteAmountIn + fee

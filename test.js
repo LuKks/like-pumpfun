@@ -227,6 +227,16 @@ test('get vault address from creator address', async function (t) {
   t.ok(creatorVault)
 })
 
+test('baseToQuoteIn reverses quoteToBase without dust', async function (t) {
+  const pumpfun = new Pumpfun(null)
+  const reserves = Pumpfun.initialReserves()
+  const buy = pumpfun.quoteToBase(10000000000n, structuredClone(reserves))
+  const reverse = pumpfun.baseToQuoteIn(buy.baseAmountOut, structuredClone(reserves))
+
+  t.is(buy.quoteAmountIn, 10000000000n)
+  t.is(reverse.quoteAmountIn, buy.quoteAmountIn)
+})
+
 test.skip('get creator fees', async function (t) {
   const user = new SOL.Keypair(process.env.WALLET_SECRET_KEY)
 
