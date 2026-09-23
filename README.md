@@ -112,11 +112,11 @@ Returns:
 
 ```js
 {
-  virtual_token_reserves: BigInt,
-  virtual_quote_reserves: BigInt,
-  real_token_reserves: BigInt,
-  real_quote_reserves: BigInt,
-  token_total_supply: BigInt,
+  virtualTokenReserves: BigInt,
+  virtualQuoteReserves: BigInt,
+  realTokenReserves: BigInt,
+  realQuoteReserves: BigInt,
+  tokenTotalSupply: BigInt,
   complete: Boolean,
   creator: String // Base58 public key
 }
@@ -254,7 +254,7 @@ Options:
 ```js
 {
   creator: String,
-  isCashbackEnabled: Boolean, // Optional, default false
+  isCashbackCoin: Boolean, // Optional, default false
   quoteMint: String, // Optional
   creatorFeeBps: BigInt | Number, // Optional, default 0n
   isHolderReward: Boolean // Optional, default false
@@ -265,17 +265,17 @@ Returns:
 
 ```js
 {
-  virtual_token_reserves: 1073000000000000n,
-  virtual_quote_reserves: 30000000000n,
-  real_token_reserves: 793100000000000n,
-  real_quote_reserves: 0n,
-  token_total_supply: 1000000000000000n,
+  virtualTokenReserves: 1073000000000000n,
+  virtualQuoteReserves: 30000000000n,
+  realTokenReserves: 793100000000000n,
+  realQuoteReserves: 0n,
+  tokenTotalSupply: 1000000000000000n,
   complete: false,
   creator: String, // From the options
-  quote_mint: String, // Optional
-  creator_fee_bps: BigInt,
-  can_edit_creator_fee: Boolean,
-  is_holder_reward: Boolean
+  quoteMint: String, // Optional
+  creatorFeeBps: BigInt,
+  canEditCreatorFee: Boolean,
+  isHolderReward: Boolean
 }
 ```
 

@@ -68,7 +68,7 @@ module.exports = class Pumpfun {
 
   static progress (reserves) {
     const initialRealTokenReserves = 793100000000000n
-    const tokensSold = initialRealTokenReserves - reserves.real_token_reserves
+    const tokensSold = initialRealTokenReserves - reserves.realTokenReserves
     const ratio = (tokensSold * 1_000_000_000n) / initialRealTokenReserves
 
     return Number(ratio) / Number(1_000_000_000n)
@@ -79,28 +79,28 @@ module.exports = class Pumpfun {
   }
 
   static price (reserves) {
-    if (reserves.virtual_token_reserves === 0n) {
+    if (reserves.virtualTokenReserves === 0n) {
       return 0n
     }
 
-    return (reserves.virtual_quote_reserves * 1_000_000_000n) / reserves.virtual_token_reserves
+    return (reserves.virtualQuoteReserves * 1_000_000_000n) / reserves.virtualTokenReserves
   }
 
   static global () {
     return {
       initialized: true,
       authority: 'FFWtrEQ4B4PKQoVuHYzZq8FabGkVatYzDpEVHsK5rrhF',
-      fee_recipient: '62qc2CNXwrYqQScmEdiZFFAnJR262PxWEuNQtxfafNgV',
-      initial_virtual_token_reserves: 1073000000000000n,
-      initial_virtual_sol_reserves: 30000000000n,
-      initial_real_token_reserves: 793100000000000n,
-      token_total_supply: 1000000000000000n,
-      fee_basis_points: 95n,
-      withdraw_authority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
-      enable_migrate: true,
-      pool_migration_fee: 15000001n,
-      creator_fee_basis_points: 5n,
-      fee_recipients: [
+      feeRecipient: '62qc2CNXwrYqQScmEdiZFFAnJR262PxWEuNQtxfafNgV',
+      initialVirtualTokenReserves: 1073000000000000n,
+      initialVirtualSolReserves: 30000000000n,
+      initialRealTokenReserves: 793100000000000n,
+      tokenTotalSupply: 1000000000000000n,
+      feeBasisPoints: 95n,
+      withdrawAuthority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
+      enableMigrate: true,
+      poolMigrationFee: 15000001n,
+      creatorFeeBasisPoints: 5n,
+      feeRecipients: [
         '7VtfL8fvgNfhz17qKRMjzQEXgbdpnHHHQRh54R9jP2RJ',
         '7hTckgnGnLQR6sdH7YkqFTAA7VwTfYFaZ6EhEsU3saCX',
         '9rPYyANsfQZw3DnDmKE3YCQF5E8oD89UXoHn9JFEhJUz',
@@ -109,13 +109,13 @@ module.exports = class Pumpfun {
         'FWsW1xNtWscwNmKv6wVsU1iTzRN6wmmk3MjxRP5tT7hz',
         'G5UZAVbAf46s7cKWoyKu8kYTip9DGTpbLZ2qa9Aq69dP'
       ],
-      set_creator_authority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
-      admin_set_creator_authority: 'UqN2p5bAzBqYdHXcgB6WLtuVrdvmy9JSAtgqZb3CMKw',
-      create_v2_enabled: true,
-      whitelist_pda: 'BwWK17cbHxwWBKZkUYvzxLcNQ1YVyaFezduWbtm2de6s',
-      reserved_fee_recipient: 'GesfTA3X2arioaHp8bbKdjG9vJtskViWACZoYvxp4twS',
-      mayhem_mode_enabled: true,
-      reserved_fee_recipients: [
+      setCreatorAuthority: '39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg',
+      adminSetCreatorAuthority: 'UqN2p5bAzBqYdHXcgB6WLtuVrdvmy9JSAtgqZb3CMKw',
+      createV2Enabled: true,
+      whitelistPda: 'BwWK17cbHxwWBKZkUYvzxLcNQ1YVyaFezduWbtm2de6s',
+      reservedFeeRecipient: 'GesfTA3X2arioaHp8bbKdjG9vJtskViWACZoYvxp4twS',
+      mayhemModeEnabled: true,
+      reservedFeeRecipients: [
         '4budycTjhs9fD6xw62VBducVTNgMgJJ5BgtKq7mAZwn6',
         '8SBKzEQU4nLSzcwF4a74F2iaUDQyTfjGndn6qUWBnrpR',
         '4UQeTP1T39KZ9Sfxzo3WR5skgsaP6NZa87BAkuazLEKH',
@@ -124,8 +124,8 @@ module.exports = class Pumpfun {
         '463MEnMeGyJekNZFQSTUABBEbLnvMTALbT6ZmsxAbAdq',
         '6AUH3WEHucYZyC61hqpqYUWVto5qA5hjHuNQ32GNnNxA'
       ],
-      is_cashback_enabled: true,
-      buyback_fee_recipients: [
+      isCashbackEnabled: true,
+      buybackFeeRecipients: [
         '5YxQFdt3Tr9zJLvkFccqXVUwhdTWJQc1fFg2YPbxvxeD',
         '9M4giFFMxmFGXtc3feFzRai56WbBqehoSeRE5GK7gf7',
         'GXPFM2caqTtQYC2cJ5yJRi9VDkpsYZXzYdwYpGnLmtDL',
@@ -135,15 +135,15 @@ module.exports = class Pumpfun {
         '5eHhjP8JaYkz83CWwvGU2uMUXefd3AazWGx4gpcuEEYD',
         'A7hAgCzFw14fejgCp387JUJRMNyz4j89JKnhtKU8piqW'
       ],
-      buyback_basis_points: 5000n,
-      initial_virtual_quote_reserves: 4292000000n,
-      whitelisted_quote_mints: [
+      buybackBasisPoints: 5000n,
+      initialVirtualQuoteReserves: 4292000000n,
+      whitelistedQuoteMints: [
         'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
       ],
-      creator_fee_configurable: true,
-      max_configurable_creator_fee_bps: 300n,
-      holder_reward_claim_authority: 'HckQ93Xqjjo8mwt5pNPWvyCTZXQZ858rvzmm7ZRrZg9t',
-      is_holder_reward_enabled: true
+      creatorFeeConfigurable: true,
+      maxConfigurableCreatorFeeBps: 300n,
+      holderRewardClaimAuthority: 'HckQ93Xqjjo8mwt5pNPWvyCTZXQZ858rvzmm7ZRrZg9t',
+      isHolderRewardEnabled: true
     }
   }
 
@@ -151,18 +151,18 @@ module.exports = class Pumpfun {
     const config = Pumpfun.global()
 
     return {
-      virtual_token_reserves: config.initial_virtual_token_reserves,
-      virtual_quote_reserves: config.initial_virtual_sol_reserves,
-      real_token_reserves: config.initial_real_token_reserves,
-      real_quote_reserves: 0n,
-      token_total_supply: config.token_total_supply,
+      virtualTokenReserves: config.initialVirtualTokenReserves,
+      virtualQuoteReserves: config.initialVirtualSolReserves,
+      realTokenReserves: config.initialRealTokenReserves,
+      realQuoteReserves: 0n,
+      tokenTotalSupply: config.tokenTotalSupply,
       complete: false,
       creator: opts.creator || null,
-      is_cashback_coin: opts.isCashbackEnabled === true,
-      quote_mint: opts.quoteMint || null,
-      creator_fee_bps: normalizeFeeBps(opts.creatorFeeBps),
-      can_edit_creator_fee: false,
-      is_holder_reward: opts.isHolderReward === true
+      isCashbackCoin: opts.isCashbackCoin === true,
+      quoteMint: opts.quoteMint || null,
+      creatorFeeBps: normalizeFeeBps(opts.creatorFeeBps),
+      canEditCreatorFee: false,
+      isHolderReward: opts.isHolderReward === true
     }
   }
 
@@ -324,7 +324,7 @@ module.exports = class Pumpfun {
 
     const bondingCurve = this.borsh.decode(accountInfo.data, ['types', 'BondingCurve'])
 
-    return bondingCurve
+    return toCamelCase(bondingCurve)
   }
 
   quoteToBase (quoteAmountIn, reserves, slippage, opts = {}) {
@@ -342,12 +342,12 @@ module.exports = class Pumpfun {
       }
     }
 
-    const n = reserves.virtual_quote_reserves * reserves.virtual_token_reserves
-    const i = reserves.virtual_quote_reserves + quoteAmountIn
+    const n = reserves.virtualQuoteReserves * reserves.virtualTokenReserves
+    const i = reserves.virtualQuoteReserves + quoteAmountIn
     const r = n / i + 1n
-    const s = reserves.virtual_token_reserves - r
+    const s = reserves.virtualTokenReserves - r
 
-    const baseAmountOut = s < reserves.real_token_reserves ? s : reserves.real_token_reserves
+    const baseAmountOut = s < reserves.realTokenReserves ? s : reserves.realTokenReserves
 
     const fee = (quoteAmountIn * getFeeBasisPoints(this.global, this.feeConfig, reserves)) / 10000n
     const userQuoteAmountIn = quoteAmountIn + fee
@@ -382,7 +382,7 @@ module.exports = class Pumpfun {
       }
     }
 
-    const n = (baseAmountIn * reserves.virtual_quote_reserves) / (reserves.virtual_token_reserves + baseAmountIn)
+    const n = (baseAmountIn * reserves.virtualQuoteReserves) / (reserves.virtualTokenReserves + baseAmountIn)
     const feeBasisPoints = getFeeBasisPoints(this.global, this.feeConfig, reserves)
     const a = ((10_000n - feeBasisPoints) * 1_000_000_000n) / 10_000n
 
@@ -419,12 +419,12 @@ module.exports = class Pumpfun {
       }
     }
 
-    if (baseAmountOut >= reserves.virtual_token_reserves) {
+    if (baseAmountOut >= reserves.virtualTokenReserves) {
       throw new Error('Not enough tokens in the pool')
     }
 
-    const denominator = reserves.virtual_token_reserves - baseAmountOut
-    const quoteAmountIn = (reserves.virtual_quote_reserves * baseAmountOut + denominator - 1n) / denominator
+    const denominator = reserves.virtualTokenReserves - baseAmountOut
+    const quoteAmountIn = (reserves.virtualQuoteReserves * baseAmountOut + denominator - 1n) / denominator
 
     const fee = (quoteAmountIn * getFeeBasisPoints(this.global, this.feeConfig, reserves)) / 10000n
     const userQuoteAmountIn = quoteAmountIn + fee
@@ -469,25 +469,25 @@ module.exports = class Pumpfun {
   }
 
   static sync (swap, reserves) {
-    if (swap.sol_amount || swap.token_amount || swap.sol_amount === 0n || swap.token_amount === 0n) {
+    if (swap.solAmount || swap.tokenAmount || swap.solAmount === 0n || swap.tokenAmount === 0n) {
       const trade = swap
 
       // Buy (SOL -> TOKEN)
-      if (trade.is_buy) {
-        reserves.real_token_reserves -= trade.token_amount
-        reserves.real_quote_reserves += trade.sol_amount
+      if (trade.isBuy) {
+        reserves.realTokenReserves -= trade.tokenAmount
+        reserves.realQuoteReserves += trade.solAmount
 
-        reserves.virtual_token_reserves -= trade.token_amount
-        reserves.virtual_quote_reserves += trade.sol_amount
+        reserves.virtualTokenReserves -= trade.tokenAmount
+        reserves.virtualQuoteReserves += trade.solAmount
       }
 
       // Sell (TOKEN -> SOL)
-      if (!trade.is_buy) {
-        reserves.real_token_reserves += trade.token_amount
-        reserves.real_quote_reserves -= trade.sol_amount
+      if (!trade.isBuy) {
+        reserves.realTokenReserves += trade.tokenAmount
+        reserves.realQuoteReserves -= trade.solAmount
 
-        reserves.virtual_token_reserves += trade.token_amount
-        reserves.virtual_quote_reserves -= trade.sol_amount
+        reserves.virtualTokenReserves += trade.tokenAmount
+        reserves.virtualQuoteReserves -= trade.solAmount
       }
 
       return
@@ -498,43 +498,43 @@ module.exports = class Pumpfun {
 
     // Buy (SOL -> TOKEN)
     if (swap.baseAmountOut) {
-      reserves.real_token_reserves -= swap.baseAmountOut
-      reserves.real_quote_reserves += swap.quoteAmountIn
+      reserves.realTokenReserves -= swap.baseAmountOut
+      reserves.realQuoteReserves += swap.quoteAmountIn
 
-      reserves.virtual_token_reserves -= swap.baseAmountOut
-      reserves.virtual_quote_reserves += swap.quoteAmountIn
+      reserves.virtualTokenReserves -= swap.baseAmountOut
+      reserves.virtualQuoteReserves += swap.quoteAmountIn
     }
 
     // Sell (TOKEN -> SOL)
     if (swap.baseAmountIn) {
-      reserves.real_token_reserves += swap.baseAmountIn
-      reserves.real_quote_reserves -= swap.quoteAmountOut
+      reserves.realTokenReserves += swap.baseAmountIn
+      reserves.realQuoteReserves -= swap.quoteAmountOut
 
-      reserves.virtual_token_reserves += swap.baseAmountIn
-      reserves.virtual_quote_reserves -= swap.quoteAmountOut
+      reserves.virtualTokenReserves += swap.baseAmountIn
+      reserves.virtualQuoteReserves -= swap.quoteAmountOut
     }
   }
 
   static unsync (swap, reserves) {
-    if (swap.sol_amount || swap.token_amount || swap.sol_amount === 0n || swap.token_amount === 0n) {
+    if (swap.solAmount || swap.tokenAmount || swap.solAmount === 0n || swap.tokenAmount === 0n) {
       const trade = swap
 
       // Buy (SOL -> TOKEN)
-      if (trade.is_buy) {
-        reserves.real_token_reserves += trade.token_amount
-        reserves.real_quote_reserves -= trade.sol_amount
+      if (trade.isBuy) {
+        reserves.realTokenReserves += trade.tokenAmount
+        reserves.realQuoteReserves -= trade.solAmount
 
-        reserves.virtual_token_reserves += trade.token_amount
-        reserves.virtual_quote_reserves -= trade.sol_amount
+        reserves.virtualTokenReserves += trade.tokenAmount
+        reserves.virtualQuoteReserves -= trade.solAmount
       }
 
       // Sell (TOKEN -> SOL)
-      if (!trade.is_buy) {
-        reserves.real_token_reserves -= trade.token_amount
-        reserves.real_quote_reserves += trade.sol_amount
+      if (!trade.isBuy) {
+        reserves.realTokenReserves -= trade.tokenAmount
+        reserves.realQuoteReserves += trade.solAmount
 
-        reserves.virtual_token_reserves -= trade.token_amount
-        reserves.virtual_quote_reserves += trade.sol_amount
+        reserves.virtualTokenReserves -= trade.tokenAmount
+        reserves.virtualQuoteReserves += trade.solAmount
       }
 
       return
@@ -545,20 +545,20 @@ module.exports = class Pumpfun {
 
     // Buy (SOL -> TOKEN)
     if (swap.baseAmountOut) {
-      reserves.real_token_reserves += swap.baseAmountOut
-      reserves.real_quote_reserves -= swap.quoteAmountIn
+      reserves.realTokenReserves += swap.baseAmountOut
+      reserves.realQuoteReserves -= swap.quoteAmountIn
 
-      reserves.virtual_token_reserves += swap.baseAmountOut
-      reserves.virtual_quote_reserves -= swap.quoteAmountIn
+      reserves.virtualTokenReserves += swap.baseAmountOut
+      reserves.virtualQuoteReserves -= swap.quoteAmountIn
     }
 
     // Sell (TOKEN -> SOL)
     if (swap.baseAmountIn) {
-      reserves.real_token_reserves -= swap.baseAmountIn
-      reserves.real_quote_reserves += swap.quoteAmountOut
+      reserves.realTokenReserves -= swap.baseAmountIn
+      reserves.realQuoteReserves += swap.quoteAmountOut
 
-      reserves.virtual_token_reserves -= swap.baseAmountIn
-      reserves.virtual_quote_reserves += swap.quoteAmountOut
+      reserves.virtualTokenReserves -= swap.baseAmountIn
+      reserves.virtualQuoteReserves += swap.quoteAmountOut
     }
   }
 
@@ -638,7 +638,7 @@ module.exports = class Pumpfun {
     const associatedBondingCurve = getAssociatedBondingCurve(mint, bondingCurveAddress)
     const bondingCurveV2Address = getBondingCurveV2(mint)
     const buybackFeeRecipient = getBuybackFeeRecipient()
-    const isCashback = reserves && reserves.is_cashback_coin === true
+    const isCashback = reserves && reserves.isCashbackCoin === true
     const userVolumeAccumulator = isCashback ? getUserVolumeAccumulator(user) : null
     const associatedUser = TokenProgram.getAssociatedTokenAddressSync(mint, user, false, TOKEN_2022_PROGRAM_ID)
 
@@ -896,7 +896,7 @@ module.exports = class Pumpfun {
       return null
     }
 
-    return this.borsh.decode(accountInfo.data, ['types', 'UserVolumeAccumulator'])
+    return toCamelCase(this.borsh.decode(accountInfo.data, ['types', 'UserVolumeAccumulator']))
   }
 
   async getGlobalVolumeAccumulatorAccount () {
@@ -907,7 +907,7 @@ module.exports = class Pumpfun {
       return null
     }
 
-    return this.borsh.decode(accountInfo.data, ['types', 'GlobalVolumeAccumulator'])
+    return toCamelCase(this.borsh.decode(accountInfo.data, ['types', 'GlobalVolumeAccumulator']))
   }
 }
 
@@ -1054,7 +1054,7 @@ function decodeFeeConfig (data) {
     offset = fees.offset
 
     feeTiers.push({
-      market_cap_lamports_threshold: marketCapLamportsThreshold,
+      marketCapLamportsThreshold,
       fees: fees.value
     })
   }
@@ -1062,10 +1062,10 @@ function decodeFeeConfig (data) {
   const feeConfig = {
     bump,
     admin,
-    flat_fees: flatFees.value,
-    fee_tiers: feeTiers,
-    stable_fee_tiers: [],
-    exotic_flat_fees: null
+    flatFees: flatFees.value,
+    feeTiers,
+    stableFeeTiers: [],
+    exoticFlatFees: null
   }
 
   if (offset + 4 > data.length) return feeConfig
@@ -1080,8 +1080,8 @@ function decodeFeeConfig (data) {
     const fees = readFees(data, offset)
     offset = fees.offset
 
-    feeConfig.stable_fee_tiers.push({
-      market_cap_lamports_threshold: marketCapLamportsThreshold,
+    feeConfig.stableFeeTiers.push({
+      marketCapLamportsThreshold,
       fees: fees.value
     })
   }
@@ -1089,33 +1089,33 @@ function decodeFeeConfig (data) {
   if (offset + 24 > data.length) return feeConfig
 
   const exoticFlatFees = readFees(data, offset)
-  feeConfig.exotic_flat_fees = exoticFlatFees.value
+  feeConfig.exoticFlatFees = exoticFlatFees.value
 
   return feeConfig
 }
 
 function getFeeBasisPoints (global, feeConfig, reserves) {
-  const customCreatorFeeBps = (reserves && reserves.creator_fee_bps) || 0n
+  const customCreatorFeeBps = (reserves && reserves.creatorFeeBps) || 0n
 
   if (!feeConfig) {
-    return global.fee_basis_points + (customCreatorFeeBps || global.creator_fee_basis_points)
+    return global.feeBasisPoints + (customCreatorFeeBps || global.creatorFeeBasisPoints)
   }
 
   const marketCap = getMarketCap(reserves)
-  const fees = calculateFeeTier(feeConfig.fee_tiers, marketCap)
+  const fees = calculateFeeTier(feeConfig.feeTiers, marketCap)
 
-  return fees.protocol_fee_bps + (customCreatorFeeBps || fees.creator_fee_bps)
+  return fees.protocolFeeBps + (customCreatorFeeBps || fees.creatorFeeBps)
 }
 
 function calculateFeeTier (feeTiers, marketCap) {
   const firstTier = feeTiers[0]
 
-  if (marketCap < firstTier.market_cap_lamports_threshold) {
+  if (marketCap < firstTier.marketCapLamportsThreshold) {
     return firstTier.fees
   }
 
   for (const tier of feeTiers.slice().reverse()) {
-    if (marketCap >= tier.market_cap_lamports_threshold) {
+    if (marketCap >= tier.marketCapLamportsThreshold) {
       return tier.fees
     }
   }
@@ -1124,20 +1124,20 @@ function calculateFeeTier (feeTiers, marketCap) {
 }
 
 function getMarketCap (reserves) {
-  if (reserves.virtual_token_reserves === 0n) {
+  if (reserves.virtualTokenReserves === 0n) {
     return 0n
   }
 
-  const tokenTotalSupply = reserves.token_total_supply || 1000000000000000n
+  const tokenTotalSupply = reserves.tokenTotalSupply || 1000000000000000n
 
-  return (tokenTotalSupply * reserves.virtual_quote_reserves) / reserves.virtual_token_reserves
+  return (tokenTotalSupply * reserves.virtualQuoteReserves) / reserves.virtualTokenReserves
 }
 
 function readFees (data, offset) {
   const value = {
-    lp_fee_bps: data.readBigUInt64LE(offset),
-    protocol_fee_bps: data.readBigUInt64LE(offset + 8),
-    creator_fee_bps: data.readBigUInt64LE(offset + 16)
+    lpFeeBps: data.readBigUInt64LE(offset),
+    protocolFeeBps: data.readBigUInt64LE(offset + 8),
+    creatorFeeBps: data.readBigUInt64LE(offset + 16)
   }
 
   return { value, offset: offset + 24 }
@@ -1151,6 +1151,24 @@ function readU128LE (data, offset) {
 }
 
 function noop () {}
+
+function toCamelCase (value) {
+  if (Array.isArray(value)) {
+    return value.map(toCamelCase)
+  }
+
+  if (value !== null && typeof value === 'object') {
+    const out = {}
+
+    for (const [key, entry] of Object.entries(value)) {
+      out[key.replace(/_([a-z])/g, (_, char) => char.toUpperCase())] = toCamelCase(entry)
+    }
+
+    return out
+  }
+
+  return value
+}
 
 function normalizeSlippage (slippage) {
   if (typeof slippage === 'number') return BigInt(Math.floor(slippage * 10_000))
